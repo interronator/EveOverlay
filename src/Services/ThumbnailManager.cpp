@@ -352,6 +352,8 @@ void ThumbnailManager::RefreshThumbnails()
 
     const EventSuppression Suppression(IgnoreViewEvents);
 
+    ReleaseGroupMoveHighlight();
+
     // No need to touch the thumbnails while one of them is highlighted
     if (HoverEffectActive == false)
     {
@@ -418,7 +420,25 @@ void ThumbnailManager::RefreshThumbnails()
 void ThumbnailManager::ApplyHighlight(IThumbnailView& View) const
 {
     const bool IsActiveHighlight = Configuration.EnableActiveClientHighlight == true && View.GetId() == ActiveClient.Handle;
-    View.SetHighlight(GroupMoveActive == true || IsActiveHighlight == true, Configuration.ActiveClientHighlightColor, Configuration.ActiveClientHighlightThickness);
+    const int Thickness = (IsActiveHighlight == true && GroupMoveActive == false) ? Configuration.ActiveClientHighlightThickness : GROUP_MOVE_HIGHLIGHT_THICKNESS;
+    View.SetHighlight(GroupMoveActive == true || IsActiveHighlight == true, Configuration.ActiveClientHighlightColor, Thickness);
+}
+
+void ThumbnailManager::ReleaseGroupMoveHighlight()
+{
+    if (GroupMoveActive == false)
+    {
+        return;
+    }
+
+    GroupMoveIdleCycles--;
+    if (GroupMoveIdleCycles > 0)
+    {
+        return;
+    }
+
+    GroupMoveActive = false;
+    ApplyHighlightToAll();
 }
 
 void ThumbnailManager::ApplyHighlightToAll()
@@ -435,12 +455,6 @@ void ThumbnailManager::ProcessPendingLocationChange()
     if (Change.has_value() == false)
     {
         return;
-    }
-
-    if (GroupMoveActive == true)
-    {
-        GroupMoveActive = false;
-        ApplyHighlightToAll();
     }
 
     IThumbnailView* const View = FindView(Change->Handle);
@@ -647,6 +661,7 @@ void ThumbnailManager::MoveOtherThumbnails(const IThumbnailView& MovedView, cons
 
     const EventSuppression Suppression(IgnoreViewEvents);
 
+    GroupMoveIdleCycles = DEFAULT_LOCATION_CHANGE_NOTIFICATION_DELAY;
     if (GroupMoveActive == false)
     {
         GroupMoveActive = true;

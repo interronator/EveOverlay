@@ -40,6 +40,7 @@ private:
     static constexpr int WINDOW_SIZE_THRESHOLD = 10;
     static constexpr int FORCED_REFRESH_CYCLE_THRESHOLD = 2;
     static constexpr int DEFAULT_LOCATION_CHANGE_NOTIFICATION_DELAY = 2;
+    static constexpr int GROUP_MOVE_HIGHLIGHT_THICKNESS = 1;
     static constexpr const wchar_t* DEFAULT_CLIENT_TITLE = L"EVE";
 
     class EventSuppression
@@ -97,6 +98,7 @@ private:
     void RefreshThumbnails();
     void ApplyHighlight(IThumbnailView& View) const;
     void ApplyHighlightToAll();
+    void ReleaseGroupMoveHighlight();
     void ProcessPendingLocationChange();
     void SetThumbnailsSize(const Size NewSize);
     void SwitchActiveClient(const HWND ForegroundClientHandle, const std::wstring& ForegroundClientTitle);
@@ -150,6 +152,7 @@ private:
     bool HoverEffectActive = false;
     HWND HoveredViewId = nullptr;
     bool GroupMoveActive = false;
+    int GroupMoveIdleCycles = 0;
     int RefreshCycleCount = 0;
     int HideThumbnailsDelay = 0;
 };
