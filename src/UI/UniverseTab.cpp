@@ -335,7 +335,7 @@ void UniverseTab::DrawRegionRow()
     const char* const Preview = SelectedRegion.empty() == true ? "All regions" : SelectedRegion.c_str();
     if (ImGui::BeginCombo("##Region", Preview) == true)
     {
-        if (ImGui::Selectable("All regions", SelectedRegion.empty() == true) == true)
+        if (Widgets::DropdownOption("All regions", SelectedRegion.empty() == true) == true)
         {
             SelectedRegion.clear();
             FilterApplied = false;
@@ -345,7 +345,7 @@ void UniverseTab::DrawRegionRow()
         {
             for (const std::string& Region : Listing->RegionNames)
             {
-                if (ImGui::Selectable(Region.c_str(), Region == SelectedRegion) == true)
+                if (Widgets::DropdownOption(Region.c_str(), Region == SelectedRegion) == true)
                 {
                     SelectedRegion = Region;
                     FilterApplied = false;
@@ -369,18 +369,16 @@ bool UniverseTab::DrawSystemRow()
     ImGui::SetNextWindowSizeConstraints(ImVec2(FieldWidth, 0.0f), ImVec2(FLT_MAX, Theme::Px(POPUP_MAX_HEIGHT)));
 
     bool Picked = false;
-    if (ImGui::BeginCombo("##System", SystemName) == true)
+    float ListHeight = 0.0f;
+    if (Widgets::BeginDropdownCombo("##System", SystemName, Theme::Px(LIST_HEIGHT), ListHeight) == true)
     {
         if (ImGui::IsWindowAppearing() == true)
         {
             Filter[0] = '\0';
             FilterApplied = false;
-            ImGui::SetKeyboardFocusHere();
         }
 
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        const bool Entered = ImGui::InputTextWithHint("##Filter", "Type to filter...", Filter, sizeof(Filter), ImGuiInputTextFlags_EnterReturnsTrue) == true;
-        Widgets::HoverTip("Type part of a system name to narrow the list. Enter picks the first match.");
+        const bool Entered = Widgets::DropdownFilter("##Filter", "Type to filter...", "Type part of a system name to narrow the list. Enter picks the first match.", Filter, sizeof(Filter));
 
         if (FilterApplied == false || AppliedFilter != Filter)
         {
@@ -398,18 +396,11 @@ bool UniverseTab::DrawSystemRow()
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, Theme::Shade(Theme::SURFACE, 0.35f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(Theme::Px(4.0f), Theme::Px(4.0f)));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(Theme::Px(8.0f), Theme::Px(2.0f)));
-        const bool ListOpen = ImGui::BeginChild("##Systems", ImVec2(0.0f, Theme::Px(LIST_HEIGHT)), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
-        ImGui::PopStyleVar(2);
-        ImGui::PopStyleColor();
-        if (ListOpen == true)
+        if (Widgets::BeginDropdownList("##Systems", ListHeight) == true)
         {
-            const float RowHeight = ImGui::GetTextLineHeight() + Theme::Px(10.0f);
             const bool HasTypedFilter = Filter[0] != '\0';
             ImGuiListClipper Clipper;
-            Clipper.Begin(static_cast<int>(Matches.size()), RowHeight + ImGui::GetStyle().ItemSpacing.y);
+            Clipper.Begin(static_cast<int>(Matches.size()), Widgets::GetDropdownOptionHeight() + ImGui::GetStyle().ItemSpacing.y);
             while (Clipper.Step() == true)
             {
                 for (int Row = Clipper.DisplayStart; Row < Clipper.DisplayEnd; Row++)
@@ -417,26 +408,16 @@ bool UniverseTab::DrawSystemRow()
                     const std::string& Name = Listing->Names[static_cast<size_t>(Matches[static_cast<size_t>(Row)])];
                     const bool IsCurrent = TextUtil::EqualsIgnoreCase(Name, SystemName);
                     const bool IsEnterTarget = Row == 0 && HasTypedFilter == true;
-                    if (ImGui::Selectable(Name.c_str(), IsCurrent == true || IsEnterTarget == true, ImGuiSelectableFlags_None, ImVec2(0.0f, RowHeight)) == true)
+                    if (Widgets::DropdownOption(Name.c_str(), IsCurrent == true || IsEnterTarget == true, 0.0f, IsEnterTarget) == true)
                     {
                         Picked = SelectSystem(Matches[static_cast<size_t>(Row)]);
                         ImGui::CloseCurrentPopup();
                     }
-
-                    if (IsEnterTarget == false)
-                    {
-                        continue;
-                    }
-
-                    const char* const Hint = "Enter";
-                    const ImVec2 HintSize = ImGui::CalcTextSize(Hint);
-                    const ImVec2 RowMax = ImGui::GetItemRectMax();
-                    ImGui::GetWindowDrawList()->AddText(ImVec2(RowMax.x - HintSize.x - Theme::Px(8.0f), ImGui::GetItemRectMin().y + (RowHeight - HintSize.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_TextDisabled), Hint);
                 }
             }
         }
 
-        ImGui::EndChild();
+        Widgets::EndDropdownList();
         ImGui::EndCombo();
     }
 
@@ -509,21 +490,20 @@ bool UniverseTab::DrawChannelRow()
     const float FieldWidth = Theme::Px(220.0f);
     Widgets::RowLabel("Intel channel", FieldWidth);
     ImGui::SetNextItemWidth(FieldWidth);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(FieldWidth, 0.0f), ImVec2(FLT_MAX, Theme::Px(POPUP_MAX_HEIGHT)));
 
     bool Changed = false;
     const char* const Preview = IntelChannel[0] == '\0' ? "Choose or type a channel" : IntelChannel;
-    if (ImGui::BeginCombo("##Channel", Preview) == true)
+    float ListHeight = 0.0f;
+    if (Widgets::BeginDropdownCombo("##Channel", Preview, Theme::Px(LIST_HEIGHT), ListHeight) == true)
     {
         if (ImGui::IsWindowAppearing() == true)
         {
             NewChannel[0] = '\0';
             FoundChannels = ChatLogWatcher::FindChannels(ChatLogWatcher::GetDefaultDirectory(), FOUND_CHANNEL_AGE);
-            ImGui::SetKeyboardFocusHere();
         }
 
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        const bool Entered = ImGui::InputTextWithHint("##NewChannel", "Type a channel name, then Enter", NewChannel, sizeof(NewChannel), ImGuiInputTextFlags_EnterReturnsTrue) == true;
-        Widgets::HoverTip("Type a channel name and press Enter to use and remember it.");
+        const bool Entered = Widgets::DropdownFilter("##NewChannel", "Type a channel name, then Enter", "Type a channel name and press Enter to use and remember it.", NewChannel, sizeof(NewChannel));
         const std::string Typed = TextUtil::Trim(NewChannel);
         if (Entered == true && Typed.empty() == false)
         {
@@ -532,65 +512,69 @@ bool UniverseTab::DrawChannelRow()
             ImGui::CloseCurrentPopup();
         }
 
-        if (SavedChannels.empty() == true)
+        if (Widgets::BeginDropdownList("##Channels", ListHeight, true) == true)
         {
-            ImGui::TextDisabled("A channel is saved here once it reports a system on the map.");
-        }
-
-        int RemoveIndex = -1;
-        const float DeleteWidth = ImGui::GetFrameHeight();
-        for (size_t Index = 0; Index < SavedChannels.size(); Index++)
-        {
-            ImGui::PushID(static_cast<int>(Index));
-
-            const float NameWidth = ImGui::GetContentRegionAvail().x - DeleteWidth - ImGui::GetStyle().ItemSpacing.x;
-            const bool IsCurrent = TextUtil::EqualsIgnoreCase(SavedChannels[Index], IntelChannel);
-            if (ImGui::Selectable(SavedChannels[Index].c_str(), IsCurrent, 0, ImVec2(NameWidth, 0.0f)) == true)
+            if (SavedChannels.empty() == true)
             {
-                CopyText(IntelChannel, sizeof(IntelChannel), SavedChannels[Index]);
-                Changed = true;
-                ImGui::CloseCurrentPopup();
+                ImGui::TextDisabled("A channel is saved here once it reports a system on the map.");
             }
 
-            ImGui::SameLine();
-            const bool DeletePressed = ImGui::Button("x", ImVec2(DeleteWidth, 0.0f));
-            Widgets::HoverTip("Forget this channel.");
-            if (DeletePressed == true)
+            int RemoveIndex = -1;
+            const float DeleteWidth = Widgets::GetDropdownOptionHeight();
+            for (size_t Index = 0; Index < SavedChannels.size(); Index++)
             {
-                RemoveIndex = static_cast<int>(Index);
+                ImGui::PushID(static_cast<int>(Index));
+
+                const float NameWidth = ImGui::GetContentRegionAvail().x - DeleteWidth - ImGui::GetStyle().ItemSpacing.x;
+                const bool IsCurrent = TextUtil::EqualsIgnoreCase(SavedChannels[Index], IntelChannel);
+                if (Widgets::DropdownOption(SavedChannels[Index].c_str(), IsCurrent, NameWidth) == true)
+                {
+                    CopyText(IntelChannel, sizeof(IntelChannel), SavedChannels[Index]);
+                    Changed = true;
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::SameLine();
+                const bool DeletePressed = ImGui::Button("x", ImVec2(DeleteWidth, DeleteWidth));
+                Widgets::HoverTip("Forget this channel.");
+                if (DeletePressed == true)
+                {
+                    RemoveIndex = static_cast<int>(Index);
+                }
+
+                ImGui::PopID();
             }
 
-            ImGui::PopID();
-        }
-
-        if (RemoveIndex >= 0)
-        {
-            SavedChannels.erase(SavedChannels.begin() + RemoveIndex);
-            Changed = true;
-        }
-
-        ImGui::Separator();
-        ImGui::TextDisabled("Found in your chat logs (tick to watch)");
-        if (FoundChannels.empty() == true)
-        {
-            ImGui::TextDisabled("None. Open the channel in the game first.");
-        }
-
-        for (const std::string& Found : FoundChannels)
-        {
-            if (TextUtil::EqualsIgnoreCase(Found, "Local") == true)
+            if (RemoveIndex >= 0)
             {
-                continue;
-            }
-
-            bool Watched = IsChannelWatched(Found);
-            if (ImGui::Checkbox(Found.c_str(), &Watched) == true)
-            {
-                ToggleChannel(Found);
+                SavedChannels.erase(SavedChannels.begin() + RemoveIndex);
                 Changed = true;
             }
+
+            ImGui::Separator();
+            ImGui::TextDisabled("Found in your chat logs (tick to watch)");
+            if (FoundChannels.empty() == true)
+            {
+                ImGui::TextDisabled("None. Open the channel in the game first.");
+            }
+
+            for (const std::string& Found : FoundChannels)
+            {
+                if (TextUtil::EqualsIgnoreCase(Found, "Local") == true)
+                {
+                    continue;
+                }
+
+                bool Watched = IsChannelWatched(Found);
+                if (ImGui::Checkbox(Found.c_str(), &Watched) == true)
+                {
+                    ToggleChannel(Found);
+                    Changed = true;
+                }
+            }
         }
 
+        Widgets::EndDropdownList();
         ImGui::EndCombo();
     }
 

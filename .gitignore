@@ -21,3 +21,8 @@ assets/sounds/*
 !assets/sounds/defaultWarning.wav
 
 dist/
+
+# Local scratch files
+/full.json
+/sample.json
+/build - no pause.bat

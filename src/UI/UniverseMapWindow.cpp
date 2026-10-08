@@ -9,6 +9,7 @@
 #include <iterator>
 #include <utility>
 
+#include "Application/AppPaths.h"
 #include "Config/TextUtil.h"
 #include "Universe/IntelParser.h"
 #include "Universe/UniverseNeighborhood.h"
@@ -312,7 +313,6 @@ void UniverseMapWindow::SavePosition() const
 void UniverseMapWindow::LoadUniverse()
 {
     Loaded = Data.Load(CsvPath);
-    Ships.Load(CsvPath.parent_path() / L"types.tsv");
     BridgeCount = 0;
     BridgesApplied = UseJumpBridges;
     std::error_code Error;
@@ -460,8 +460,15 @@ void UniverseMapWindow::PollIntel()
     bool SpottedInRange = false;
     bool AnyPriority = false;
     int ClosestJumps = INT_MAX;
+    std::unordered_set<std::string> SeenMessages;
     for (const ChatMessage& Message : Watcher.Poll())
     {
+        const std::string MessageKey = Message.Channel + '\n' + Message.Time + '\n' + Message.Sender + '\n' + Message.Text;
+        if (SeenMessages.insert(MessageKey).second == false)
+        {
+            continue;
+        }
+
         const std::vector<int> Systems = IntelParser::FindSystems(Data, Message.Text, Candidates, IgnoreClear);
         if (IgnoreClear == true)
         {
@@ -479,7 +486,7 @@ void UniverseMapWindow::PollIntel()
         }
 
         const bool Priority = Keywords.empty() == false && IntelParser::ContainsKeyword(Message.Text, Keywords) == true;
-        if (Priority == false && IntelParser::IsHarmlessReport(Ships, Message.Text) == true)
+        if (Priority == false && IntelParser::IsHarmlessReport(ShipCatalog::GetShared(AppPaths::GetShipDataPath()),Message.Text) == true)
         {
             for (const int System : Systems)
             {

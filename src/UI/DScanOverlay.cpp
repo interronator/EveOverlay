@@ -50,14 +50,19 @@ bool DScanOverlay::HasResult() const
 
 bool DScanOverlay::IsCatalogLoaded() const
 {
-    return Catalog.Count() > 0;
+    return ShipCatalog::GetShared(CatalogPath).Count() > 0;
 }
 
-bool DScanOverlay::TryGetClipboardText(std::string* const Text)
+bool DScanOverlay::TryGetClipboardText(std::string* const Text, bool* const Opened)
 {
     if (::OpenClipboard(nullptr) == FALSE)
     {
         return false;
+    }
+
+    if (Opened != nullptr)
+    {
+        *Opened = true;
     }
 
     bool Read = false;
@@ -85,13 +90,7 @@ bool DScanOverlay::ReadClipboardNow()
 
 bool DScanOverlay::Accept(const std::string& Text)
 {
-    if (CatalogTried == false)
-    {
-        CatalogTried = true;
-        Catalog.Load(CatalogPath);
-    }
-
-    DScanResult Result = DScanAnalyzer::Analyze(Catalog, Text);
+    DScanResult Result = DScanAnalyzer::Analyze(ShipCatalog::GetShared(CatalogPath), Text);
     if (Result.LooksLikeScan == false)
     {
         return false;
@@ -114,9 +113,15 @@ void DScanOverlay::Tick()
         {
             std::string Text;
             // The clipboard can be busy for a moment; the same change is tried again on the next tick
-            if (TryGetClipboardText(&Text) == true)
+            bool Opened = false;
+            const bool HasText = TryGetClipboardText(&Text, &Opened);
+            if (Opened == true)
             {
                 LastClipboardSequence = Sequence;
+            }
+
+            if (HasText == true)
+            {
                 Accept(Text);
             }
         }

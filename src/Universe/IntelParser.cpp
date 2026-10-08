@@ -132,6 +132,11 @@ bool IntelParser::IsHarmlessReport(const ShipCatalog& Ships, const std::string& 
             MatchedHarmless = true;
         }
 
+        if (MatchedLength == 0 && IsThreatWord(Words[Start]) == true)
+        {
+            return false;
+        }
+
         if (MatchedLength == 0)
         {
             Start++;
@@ -162,6 +167,18 @@ bool IntelParser::IsHarmlessAlias(const std::string& Word)
 {
     static const std::unordered_set<std::string> HARMLESS_WORDS = {"shuttle", "shuttles", "pod", "pods", "capsule", "capsules", "hauler", "haulers", "miner", "miners", "freighter", "freighters", "rookie"};
     return HARMLESS_WORDS.contains(TextUtil::ToLower(Word));
+}
+
+bool IntelParser::IsThreatWord(const std::string& Word)
+{
+    static const std::unordered_set<std::string> THREAT_WORDS = {
+        "hic", "hics", "dic", "dics", "hictor", "hictors", "interdictor", "interdictors", "bubble", "bubbles", "bubbled",
+        "blops", "bo", "cyno", "cynos", "dread", "dreads", "dreadnought", "dreadnoughts", "carrier", "carriers", "super", "supers",
+        "supercarrier", "titan", "titans", "fax", "faxes", "recon", "recons", "bomber", "bombers", "stealth", "inty", "interceptor",
+        "interceptors", "frig", "frigs", "frigate", "frigates", "destroyer", "destroyers", "cruiser", "cruisers", "bc", "bcs",
+        "battlecruiser", "battlecruisers", "bs", "battleship", "battleships", "logi", "gang", "fleet", "camp", "camping", "roam",
+        "roaming", "hostile", "hostiles", "neut", "neuts", "red", "reds", "tackle", "tackled", "scram", "scrammed", "dictor"};
+    return THREAT_WORDS.contains(TextUtil::ToLower(Word));
 }
 
 std::vector<std::string> IntelParser::ParseKeywordList(const std::string& Text)

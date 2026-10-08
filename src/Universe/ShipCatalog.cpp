@@ -34,11 +34,35 @@ bool ShipCatalog::Load(const std::filesystem::path& TsvPath)
         Type.Category = Fields[FIELD_CATEGORY];
 
         ById[Id] = Types.size();
-        ByLowerName.emplace(TextUtil::ToLower(Type.Name), Types.size());
+        // Several types can share a name (an NPC "Vanguard" and the real one); a ship wins over anything else
+        const std::string LowerName = TextUtil::ToLower(Type.Name);
+        const std::unordered_map<std::string, size_t>::iterator Existing = ByLowerName.find(LowerName);
+        if (Existing == ByLowerName.end())
+        {
+            ByLowerName.emplace(LowerName, Types.size());
+        }
+        else if (Types[Existing->second].Category != "Ship" && Type.Category == "Ship")
+        {
+            Existing->second = Types.size();
+        }
+
         Types.push_back(std::move(Type));
     }
 
     return Types.empty() == false;
+}
+
+const ShipCatalog& ShipCatalog::GetShared(const std::filesystem::path& TsvPath)
+{
+    static ShipCatalog Shared;
+    static bool Tried = false;
+    if (Tried == false)
+    {
+        Tried = true;
+        Shared.Load(TsvPath);
+    }
+
+    return Shared;
 }
 
 const ShipType* ShipCatalog::FindById(const int Id) const

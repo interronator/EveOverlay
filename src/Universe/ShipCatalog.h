@@ -19,6 +19,9 @@ class ShipCatalog
 public:
     bool Load(const std::filesystem::path& TsvPath);
 
+    // The catalog every window shares, read from TsvPath on the first call and kept for the rest of the run
+    static const ShipCatalog& GetShared(const std::filesystem::path& TsvPath);
+
     const ShipType* FindById(const int Id) const;
     const ShipType* FindByName(const std::string& Name) const;
     size_t Count() const;

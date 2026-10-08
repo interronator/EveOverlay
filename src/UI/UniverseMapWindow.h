@@ -194,7 +194,6 @@ private:
     std::unordered_map<int, ULONGLONG> AlertStart;
     std::unordered_map<int, ULONGLONG> ClearStart;
     std::unordered_map<int, ULONGLONG> CautionStart;
-    ShipCatalog Ships;
     ULONGLONG AlertDurationMs = 300000;
     std::string Center = "Jita";
     std::string Channel = "Intel";

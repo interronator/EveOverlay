@@ -34,6 +34,7 @@ private:
 
     static bool IsHarmlessGroup(const std::string& Group);
     static bool IsHarmlessAlias(const std::string& Word);
+    static bool IsThreatWord(const std::string& Word);
 
     struct SystemMatch
     {

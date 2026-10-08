@@ -36,7 +36,10 @@ void DwmThumbnail::Register(const HWND Destination, const HWND Source)
     }
 
     ThumbnailHandle = NewHandle;
+    DestinationWindow = Destination;
+    SourceWindow = Source;
     LastSourceSize = {};
+    BadUpdates = 0;
 }
 
 void DwmThumbnail::Unregister()
@@ -67,17 +70,39 @@ void DwmThumbnail::Update()
     SIZE SourceSize = {};
     const HRESULT QueryResult = DwmApi::QuerySourceSize(ThumbnailHandle, &SourceSize);
 
-    // A thumbnail that DWM rejects or that has no source picture is dropped so the next refresh registers a fresh one
+    // A thumbnail that DWM keeps rejecting or that keeps having no source picture is dropped so the next refresh registers a fresh one;
+    // a single bad reading is common while a client is loading or resizing and is given a few refreshes to pass
     if (FAILED(UpdateResult) == true || FAILED(QueryResult) == true || SourceSize.cx <= 0 || SourceSize.cy <= 0)
+    {
+        BadUpdates++;
+        if (BadUpdates >= MAX_BAD_UPDATES)
+        {
+            Unregister();
+        }
+
+        return;
+    }
+
+    BadUpdates = 0;
+
+    // A client that resized after registering (e.g. finished loading) gets a fresh thumbnail, swapped in place so the picture does not go blank
+    const bool SizeChanged = LastSourceSize.cx != 0 && (LastSourceSize.cx != SourceSize.cx || LastSourceSize.cy != SourceSize.cy);
+    LastSourceSize = SourceSize;
+    if (SizeChanged == false)
+    {
+        return;
+    }
+
+    HTHUMBNAIL NewHandle = nullptr;
+    if (FAILED(DwmApi::RegisterThumbnail(DestinationWindow, SourceWindow, &NewHandle)) == true)
     {
         Unregister();
         return;
     }
 
-    // A client that resized after registering (e.g. finished loading) gets a fresh thumbnail
-    const bool SizeChanged = LastSourceSize.cx != 0 && (LastSourceSize.cx != SourceSize.cx || LastSourceSize.cy != SourceSize.cy);
-    LastSourceSize = SourceSize;
-    if (SizeChanged == true)
+    DwmApi::UnregisterThumbnail(ThumbnailHandle);
+    ThumbnailHandle = NewHandle;
+    if (FAILED(DwmApi::UpdateThumbnailProperties(ThumbnailHandle, Properties)) == true)
     {
         Unregister();
     }

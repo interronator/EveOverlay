@@ -72,7 +72,7 @@ bool SoundPicker::Draw(const char* const Label, const char* const Id, std::strin
             BundledSounds = AlertSound::GetBundledSounds();
         }
 
-        if (IsOptional == true && ImGui::Selectable("Same as alert sound", Path.empty() == true) == true)
+        if (IsOptional == true && Widgets::DropdownOption("Same as alert sound", Path.empty() == true) == true)
         {
             Path.clear();
             Changed = true;
@@ -81,7 +81,7 @@ bool SoundPicker::Draw(const char* const Label, const char* const Id, std::strin
         for (const std::filesystem::path& Bundled : BundledSounds)
         {
             const bool Selected = (IsOptional == false || Path.empty() == false) && IsSelected(Path, Bundled) == true;
-            if (ImGui::Selectable(DisplayName(Bundled).c_str(), Selected) == true)
+            if (Widgets::DropdownOption(DisplayName(Bundled).c_str(), Selected) == true)
             {
                 Path = TextUtil::ToUtf8(Bundled.filename().wstring());
                 Changed = true;
@@ -89,7 +89,7 @@ bool SoundPicker::Draw(const char* const Label, const char* const Id, std::strin
         }
 
         ImGui::Separator();
-        if (ImGui::Selectable("Custom file...") == true)
+        if (Widgets::DropdownOption("Custom file...", false) == true)
         {
             Changed = Browse(Path) == true || Changed == true;
         }

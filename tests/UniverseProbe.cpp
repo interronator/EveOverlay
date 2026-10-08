@@ -188,11 +188,10 @@ int main(const int ArgumentCount, const char* const Arguments[])
 
     {
         const std::vector<std::string> Found = ChatLogWatcher::FindChannels(TempDirectory, std::chrono::hours(24 * 30));
-        const auto Has = [&Found](const char* const Name)
-        {
-            return std::find(Found.begin(), Found.end(), Name) != Found.end();
-        };
-        Check.Expect(Has("I. Ftn Intel") == true && Has("Fresh Intel") == true && Has("Local") == true, "channel names are found, without the date, time and listener id");
+        const bool HasFtn = std::find(Found.begin(), Found.end(), "I. Ftn Intel") != Found.end();
+        const bool HasFresh = std::find(Found.begin(), Found.end(), "Fresh Intel") != Found.end();
+        const bool HasLocal = std::find(Found.begin(), Found.end(), "Local") != Found.end();
+        Check.Expect(HasFtn == true && HasFresh == true && HasLocal == true,"channel names are found, without the date, time and listener id");
         Check.Expect(std::count(Found.begin(), Found.end(), std::string("I. Ftn Intel")) == 1, "a channel with several logs is listed once");
         Check.Expect(ChatLogWatcher::FindChannels(TempDirectory, std::chrono::hours(0)).empty() == true && ChatLogWatcher::FindChannels(TempDirectory / "missing", std::chrono::hours(24)).empty() == true, "nothing found when too old or missing");
     }

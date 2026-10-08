@@ -13,7 +13,7 @@
 std::filesystem::path GameLogWatcher::GetDefaultDirectory()
 {
     PWSTR Documents = nullptr;
-    if (FAILED(::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &Documents)))
+    if (FAILED(::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &Documents)) == true)
     {
         ::CoTaskMemFree(Documents);
         return std::filesystem::path();
@@ -63,19 +63,19 @@ std::vector<GameLogEvent> GameLogWatcher::Poll()
 
 void GameLogWatcher::ScanDirectory()
 {
+    if (Started == false)
+    {
+        FILETIME Now = {};
+        ::GetSystemTimeAsFileTime(&Now);
+        StartedAt = (static_cast<ULONGLONG>(Now.dwHighDateTime) << 32) | Now.dwLowDateTime;
+    }
+
     std::error_code Error;
     std::filesystem::directory_iterator Iterator(Directory, Error);
     if (Error.value() != 0)
     {
         Files.clear();
         return;
-    }
-
-    if (Started == false)
-    {
-        FILETIME Now = {};
-        ::GetSystemTimeAsFileTime(&Now);
-        StartedAt = (static_cast<ULONGLONG>(Now.dwHighDateTime) << 32) | Now.dwLowDateTime;
     }
 
     std::map<std::filesystem::path, FileState> Followed;

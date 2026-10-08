@@ -458,3 +458,91 @@ bool Widgets::IsLinkClicked(const char* const Text)
 
     return Hovered == true && ImGui::IsMouseClicked(ImGuiMouseButton_Left) == true;
 }
+
+bool Widgets::DropdownFilter(const char* const Id, const char* const Hint, const char* const Tip, char* const Buffer, const size_t BufferSize)
+{
+    if (ImGui::IsWindowAppearing() == true)
+    {
+        ImGui::SetKeyboardFocusHere();
+    }
+
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    const bool Entered = ImGui::InputTextWithHint(Id, Hint, Buffer, BufferSize, ImGuiInputTextFlags_EnterReturnsTrue);
+    HoverTip(Tip);
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(2.0f)));
+    return Entered;
+}
+
+bool Widgets::BeginDropdownList(const char* const Id, const float Height, const bool FitContent)
+{
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, Theme::PANE);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(Theme::Px(4.0f), Theme::Px(4.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(Theme::Px(8.0f), Theme::Px(2.0f)));
+    if (FitContent == true)
+    {
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, Height));
+        return ImGui::BeginChild(Id, ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_AutoResizeY);
+    }
+
+    return ImGui::BeginChild(Id, ImVec2(0.0f, Height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+}
+
+void Widgets::EndDropdownList()
+{
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+}
+
+float Widgets::GetDropdownOptionHeight()
+{
+    return ImGui::GetTextLineHeight() + Theme::Px(10.0f);
+}
+
+bool Widgets::DropdownOption(const char* const Label, const bool Selected, const float Width, const bool ShowEnterHint)
+{
+    const float Height = GetDropdownOptionHeight();
+    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
+    const bool Clicked = ImGui::Selectable(Label, Selected, ImGuiSelectableFlags_None, ImVec2(Width, Height));
+    ImGui::PopStyleVar();
+
+    if (ShowEnterHint == true)
+    {
+        const char* const Hint = "Enter";
+        const ImVec2 HintSize = ImGui::CalcTextSize(Hint);
+        const ImVec2 Minimum = ImGui::GetItemRectMin();
+        const ImVec2 Maximum = ImGui::GetItemRectMax();
+        ImGui::GetWindowDrawList()->AddText(ImVec2(Maximum.x - HintSize.x - Theme::Px(8.0f), Minimum.y + (Height - HintSize.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_TextDisabled), Hint);
+    }
+
+    return Clicked;
+}
+
+bool Widgets::BeginDropdownCombo(const char* const Id, const char* const Preview, const float MaximumListHeight, float& ListHeight)
+{
+    const ImGuiViewport* const Viewport = ImGui::GetMainViewport();
+    const ImGuiStyle& Style = ImGui::GetStyle();
+    const ImVec2 ControlMinimum = ImGui::GetCursorScreenPos();
+    const float ControlBottom = ControlMinimum.y + ImGui::GetFrameHeight();
+    const float Below = Viewport->Pos.y + Viewport->Size.y - ControlBottom;
+    const float Above = ControlMinimum.y - Viewport->Pos.y;
+
+    // The popup holds the filter box and the list, plus its own padding and the list's frame
+    const float Padding = Theme::Px(DROPDOWN_POPUP_PADDING);
+    const float Overhead = ImGui::GetFrameHeight() + Theme::Px(2.0f) + Style.ItemSpacing.y + Padding * 2.0f + Theme::Px(14.0f);
+    const float MinimumList = Theme::Px(MINIMUM_DROPDOWN_LIST_HEIGHT);
+
+    // Opening downward is what people expect, so it is forced whenever a usable list fits there; otherwise the popup flips upward
+    // on its own and the list is sized for the room above
+    const bool FitsBelow = Below - Overhead >= MinimumList;
+    ListHeight = std::clamp((FitsBelow == true ? Below : Above) - Overhead, MinimumList, MaximumListHeight);
+    if (FitsBelow == true)
+    {
+        ImGui::SetNextWindowPos(ImVec2(ControlMinimum.x, ControlBottom + Theme::Px(2.0f)));
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(Padding, Padding));
+    const bool Open = ImGui::BeginCombo(Id, Preview);
+    ImGui::PopStyleVar();
+    return Open;
+}

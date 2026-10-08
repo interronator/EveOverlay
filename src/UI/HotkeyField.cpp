@@ -4,9 +4,15 @@
 
 ImGuiID HotkeyField::Capturing = 0;
 int HotkeyField::CaptureStartFrame = 0;
+int HotkeyField::LastListenFrame = 0;
 
 bool HotkeyField::IsCapturing()
 {
+    if (Capturing != 0 && ImGui::GetCurrentContext() != nullptr && ImGui::GetFrameCount() - LastListenFrame > 1)
+    {
+        Capturing = 0;
+    }
+
     return Capturing != 0;
 }
 
@@ -62,10 +68,16 @@ bool HotkeyField::Draw(const char* const Id, Hotkey& Value, const float Width)
         ImGui::PopStyleColor();
     }
 
+    if (Listening == true)
+    {
+        LastListenFrame = ImGui::GetFrameCount();
+    }
+
     if (Clicked == true && Listening == false)
     {
         Capturing = FieldId;
         CaptureStartFrame = ImGui::GetFrameCount();
+        LastListenFrame = CaptureStartFrame;
         return false;
     }
 

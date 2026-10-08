@@ -25,4 +25,7 @@ private:
     // Only one field listens at a time
     static ImGuiID Capturing;
     static int CaptureStartFrame;
+
+    // The last frame the listening field was drawn in; a field that stops being drawn (its tab was left) ends the capture
+    static int LastListenFrame;
 };

@@ -20,4 +20,5 @@ private:
 
     std::unique_ptr<IDwmThumbnail> Thumbnail;
     Point StartLocation{0, 0};
-    Point EndLocation{0, 0};};
+    Point EndLocation{0, 0};
+};

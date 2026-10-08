@@ -59,6 +59,11 @@ private:
     // Logs untouched for this long belong to finished sessions and are not opened
     static constexpr std::chrono::hours STALE_LOG_AGE{24};
 
+    static constexpr std::uintmax_t TAIL_WINDOW_BYTES = 64 * 1024;
+
+    // The time and system of the last "Channel changed to" line in one log; false when the log has none
+    static bool FindLastChannelChange(const std::filesystem::path& Path, std::string* const Time, std::string* const System);
+
     bool MatchesChannel(const std::filesystem::path& Path) const;
     bool WasCreatedSinceStart(const std::filesystem::path& Path) const;
     std::string ReadListener(const std::filesystem::path& Path);

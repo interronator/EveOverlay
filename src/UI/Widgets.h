@@ -81,9 +81,23 @@ public:
 
     static bool IsLinkClicked(const char* const Text);
 
+    // Shared look of every searchable dropdown: a filter box on top, then an inset list of tall, evenly spaced options.
+    // Enter in the filter box picks the first option, which ShowEnterHint marks. BeginDropdownList must always be paired with EndDropdownList.
+    static bool DropdownFilter(const char* const Id, const char* const Hint, const char* const Tip, char* const Buffer, const size_t BufferSize);
+    // Opens a combo popup below the control when a usable list fits there. ListHeight (pixels) is the list height that fits the popup on screen. Call with the cursor on the combo.
+    static bool BeginDropdownCombo(const char* const Id, const char* const Preview, const float MaximumListHeight, float& ListHeight);
+    // With FitContent the list is only as tall as its entries, up to Height, so a short list does not leave an empty popup
+    static bool BeginDropdownList(const char* const Id, const float Height, const bool FitContent = false);
+    static void EndDropdownList();
+    static float GetDropdownOptionHeight();
+    static bool DropdownOption(const char* const Label, const bool Selected, const float Width = 0.0f, const bool ShowEnterHint = false);
+
+
 private:
     static constexpr const char* ANCHOR_TIPS[9] = {"Grow the zoomed preview toward the bottom right", "Grow toward the bottom, centred", "Grow toward the bottom left", "Grow toward the right, centred", "Grow from the centre in all directions", "Grow toward the left, centred", "Grow toward the top right", "Grow toward the top, centred", "Grow toward the top left"};
     static constexpr double ROW_TIP_DELAY = 0.35;
+    static constexpr float MINIMUM_DROPDOWN_LIST_HEIGHT = 76.0f;
+    static constexpr float DROPDOWN_POPUP_PADDING = 4.0f;
 
     static float RowStartY;
     static const char* RowTipText;

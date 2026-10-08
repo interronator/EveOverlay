@@ -58,7 +58,7 @@ void ChatLogWatcher::SetDirectory(std::filesystem::path NewDirectory)
 std::filesystem::path ChatLogWatcher::GetDefaultDirectory()
 {
     PWSTR Documents = nullptr;
-    if (FAILED(::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &Documents)))
+    if (FAILED(::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &Documents)) == true)
     {
         ::CoTaskMemFree(Documents);
         return std::filesystem::path();
@@ -155,36 +155,77 @@ std::string ChatLogWatcher::FindCurrentSystem() const
             continue;
         }
 
-        std::ifstream Stream(Entry.path(), std::ios::binary);
-        if (Stream.is_open() == false)
+        std::string FileTime;
+        std::string FileSystem;
+        if (FindLastChannelChange(Entry.path(), &FileTime, &FileSystem) == false || FileTime < NewestTime)
         {
             continue;
         }
 
-        const std::string Bytes((std::istreambuf_iterator<char>(Stream)), std::istreambuf_iterator<char>());
-        std::wstring Wide(reinterpret_cast<const wchar_t*>(Bytes.data()), Bytes.size() / sizeof(wchar_t));
-        std::erase(Wide, static_cast<wchar_t>(0xFEFF));
-        const std::string Text = TextUtil::ToUtf8(Wide);
-        for (const std::string& RawLine : TextUtil::Split(Text, '\n'))
-        {
-            ChatMessage Message;
-            if (TryParseLine(TextUtil::Trim(RawLine), &Message) == false || Message.Sender != "EVE System")
-            {
-                continue;
-            }
-
-            const std::string System = ParseChannelChange(Message.Text);
-            if (System.empty() == true || Message.Time < NewestTime)
-            {
-                continue;
-            }
-
-            NewestTime = Message.Time;
-            NewestSystem = System;
-        }
+        NewestTime = FileTime;
+        NewestSystem = FileSystem;
     }
 
     return NewestSystem;
+}
+
+bool ChatLogWatcher::FindLastChannelChange(const std::filesystem::path& Path, std::string* const Time, std::string* const System)
+{
+    std::ifstream Stream(Path, std::ios::binary);
+    if (Stream.is_open() == false)
+    {
+        return false;
+    }
+
+    Stream.seekg(0, std::ios::end);
+    const std::streamoff EndPosition = Stream.tellg();
+    if (EndPosition < 0)
+    {
+        return false;
+    }
+
+    // The newest change is near the end, so read a growing tail instead of the whole log
+    const std::uintmax_t Size = static_cast<std::uintmax_t>(EndPosition) - static_cast<std::uintmax_t>(EndPosition) % sizeof(wchar_t);
+    std::uintmax_t WindowBytes = TAIL_WINDOW_BYTES;
+    while (true)
+    {
+        const std::uintmax_t Start = Size > WindowBytes ? Size - WindowBytes : 0;
+        Stream.clear();
+        Stream.seekg(static_cast<std::streamoff>(Start));
+        std::string Bytes(static_cast<size_t>(Size - Start), '\0');
+        Stream.read(Bytes.data(), static_cast<std::streamsize>(Bytes.size()));
+        Bytes.resize(static_cast<size_t>(Stream.gcount()));
+        Bytes.resize(Bytes.size() - Bytes.size() % sizeof(wchar_t));
+
+        std::wstring Wide(reinterpret_cast<const wchar_t*>(Bytes.data()), Bytes.size() / sizeof(wchar_t));
+        std::erase(Wide, static_cast<wchar_t>(0xFEFF));
+        const std::vector<std::string> Lines = TextUtil::Split(TextUtil::ToUtf8(Wide), '\n');
+        for (std::vector<std::string>::const_reverse_iterator Line = Lines.rbegin(); Line != Lines.rend(); ++Line)
+        {
+            ChatMessage Message;
+            if (TryParseLine(TextUtil::Trim(*Line), &Message) == false || Message.Sender != "EVE System")
+            {
+                continue;
+            }
+
+            const std::string Found = ParseChannelChange(Message.Text);
+            if (Found.empty() == true)
+            {
+                continue;
+            }
+
+            *Time = Message.Time;
+            *System = Found;
+            return true;
+        }
+
+        if (Start == 0)
+        {
+            return false;
+        }
+
+        WindowBytes *= 4;
+    }
 }
 
 bool ChatLogWatcher::TryParseLine(const std::string& Line, ChatMessage* const Result)

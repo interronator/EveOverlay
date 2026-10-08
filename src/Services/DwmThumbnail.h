@@ -21,7 +21,12 @@ public:
     bool IsRegistered() const override;
 
 private:
+    static constexpr int MAX_BAD_UPDATES = 3;
+
     const IWindowManager& WindowManagerInstance;
+    HWND DestinationWindow = nullptr;
+    HWND SourceWindow = nullptr;
+    int BadUpdates = 0;
     HTHUMBNAIL ThumbnailHandle = nullptr;
     DWM_THUMBNAIL_PROPERTIES Properties = {};
     SIZE LastSourceSize = {};

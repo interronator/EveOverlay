@@ -44,7 +44,8 @@ private:
     static constexpr float PANEL_WIDTH = 290.0f;
     static constexpr size_t MAXIMUM_FLAG_ROWS = 5;
 
-    static bool TryGetClipboardText(std::string* const Text);
+    // Opened tells whether the clipboard could be opened at all, which is true even when it holds no text
+    static bool TryGetClipboardText(std::string* const Text, bool* const Opened = nullptr);
 
     bool Accept(const std::string& Text);
     std::vector<PanelRow> BuildRows() const;
@@ -54,8 +55,6 @@ private:
     InfoPanelWindow Panel;
     TimerWindow Ticker;
     std::filesystem::path CatalogPath;
-    ShipCatalog Catalog;
-    bool CatalogTried = false;
     DScanOverlayOptions Settings;
     DScanResult LastResult;
     bool ResultReady = false;

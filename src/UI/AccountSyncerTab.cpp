@@ -369,7 +369,7 @@ bool AccountSyncerTab::DrawFolderRow()
 
         for (const std::filesystem::path& Folder : Folders)
         {
-            if (ImGui::Selectable(BuildFolderLabel(Folder).c_str(), Folder == CurrentFolder) == false)
+            if (Widgets::DropdownOption(BuildFolderLabel(Folder).c_str(), Folder == CurrentFolder) == false)
             {
                 continue;
             }
@@ -412,7 +412,7 @@ bool AccountSyncerTab::DrawAccountRow()
         for (const std::filesystem::path& File : UserFiles)
         {
             ImGui::PushID(TextUtil::ToUtf8(File.filename().wstring()).c_str());
-            if (ImGui::Selectable(BuildFileLabel(File).c_str(), File == Current) == true)
+            if (Widgets::DropdownOption(BuildFileLabel(File).c_str(), File == Current) == true)
             {
                 UserFilePath = TextUtil::ToUtf8(File.wstring());
                 Status.clear();

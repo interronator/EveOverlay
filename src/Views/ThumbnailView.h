@@ -82,6 +82,7 @@ private:
     static constexpr int RESIZE_EVENT_TIMEOUT_MS = 500;
     static constexpr double OPACITY_THRESHOLD = 0.9;
     static constexpr double OPACITY_EPSILON = 0.1;
+    static constexpr ULONGLONG TOPMOST_RETRY_DELAY_MS = 5000;
 
     static BYTE ToAlpha(const double Opacity);
 
@@ -144,6 +145,8 @@ private:
     bool OverlayEnabled = false;
     bool OverlayVisible = false;
     bool TopMost = false;
+    bool TopMostWarned = false;
+    ULONGLONG NextTopMostRetryTick = 0;
     bool LockedInPlace = false;
     bool HighlightEnabled = false;
     bool HighlightRequested = false;

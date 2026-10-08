@@ -196,6 +196,11 @@ void ThumbnailView::SetTopMost(const bool EnableTopMost)
         return;
     }
 
+    if (TopMost == EnableTopMost && ::GetTickCount64() < NextTopMostRetryTick)
+    {
+        return;
+    }
+
     Overlay.SetTopMost(EnableTopMost);
     ApplyTopMost(EnableTopMost);
 
@@ -215,8 +220,18 @@ void ThumbnailView::SetTopMost(const bool EnableTopMost)
 
         if (((GetExStyle() & WS_EX_TOPMOST) != 0) != EnableTopMost)
         {
-            Logger::Warning("Thumbnail could not be made topmost even with attached input");
+            NextTopMostRetryTick = ::GetTickCount64() + TOPMOST_RETRY_DELAY_MS;
+            if (TopMostWarned == false)
+            {
+                TopMostWarned = true;
+                Logger::Warning("Thumbnail could not be made topmost even with attached input");
+            }
         }
+    }
+
+    if (((GetExStyle() & WS_EX_TOPMOST) != 0) == EnableTopMost)
+    {
+        TopMostWarned = false;
     }
 
     TopMost = EnableTopMost;
