@@ -32,7 +32,7 @@ Windows 10 or 11 (64-bit). Nothing else.
 
 ## Building from source
 
-Only needed if you want to change the code. You need Visual Studio 2022, CMake and vcpkg; the short version is to double-click `build.bat`. Details are in [docs/BUILDING.md](docs/BUILDING.md).
+Only needed if you want to change the code. You need Visual Studio 2022, CMake and vcpkg; the short version is to double-click `build.bat`. The exe should be in `Binaries/Release`. Details are in [docs/BUILDING.md](docs/BUILDING.md).
 
 To make the release zip yourself, build first, then run `powershell -ExecutionPolicy Bypass -File package.ps1`. Pushing a tag like `v1.0.0` makes GitHub build and publish the zip automatically (see `.github/workflows/release.yml`).
 
