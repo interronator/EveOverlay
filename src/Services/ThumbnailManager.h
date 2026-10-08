@@ -10,6 +10,9 @@
 
 #include "Config/ConfigurationStorage.h"
 #include "Config/ThumbnailConfiguration.h"
+#include "Services/AlertSound.h"
+#include "Services/GameLogWatcher.h"
+#include "Services/GlobalHotkeyWindow.h"
 #include "Services/IProcessMonitor.h"
 #include "Services/IThumbnailManager.h"
 #include "Services/IWindowManager.h"
@@ -30,11 +33,22 @@ public:
     void UpdateThumbnailsSize() override;
     void UpdateThumbnailFrames() override;
     void ArrangeThumbnails(const ThumbnailArrangement& Arrangement) override;
+    void UpdateHotkeys() override;
 
     void CloseAllViews();
     size_t GetViewCount() const;
 
+    // The character name in an "EVE - Name" window title; empty for a client still on the login screen
+    static std::wstring GetCharacterName(const std::wstring& Title);
+
+    // Whether the preview of this client is currently flashing because of an attack
+    bool IsAttackAlertActive(const HWND Id) const;
+
 private:
+    static constexpr int ATTACK_BLINK_MS = 400;
+    static constexpr int ATTACK_MINIMUM_THICKNESS = 4;
+    static constexpr ULONGLONG ATTACK_SOUND_GAP_MS = 4000;
+
     static constexpr int WINDOW_POSITION_THRESHOLD_LOW = -10000;
     static constexpr int WINDOW_POSITION_THRESHOLD_HIGH = 31000;
     static constexpr int WINDOW_SIZE_THRESHOLD = 10;
@@ -95,8 +109,16 @@ private:
     IThumbnailView* FindView(const HWND Id) const;
     void AttachCallbacks(IThumbnailView& View);
     void UpdateThumbnailsList();
+    std::unique_ptr<IThumbnailView> CreateView(const ProcessInfo& Process);
     void RefreshThumbnails();
     void ApplyHighlight(IThumbnailView& View) const;
+    void CycleClients(const size_t GroupIndex, const int Direction);
+    void TogglePreviews();
+    void MinimizeAllClients();
+    std::vector<IThumbnailView*> GetCycleOrder(const CycleGroup& Group) const;
+    void PollGameLogs();
+    void ExpireAttackAlerts();
+    void RaiseAttackAlert(const GameLogEvent& Event);
     void ApplyHighlightToAll();
     void ReleaseGroupMoveHighlight();
     void ProcessPendingLocationChange();
@@ -141,6 +163,13 @@ private:
     IThumbnailViewFactory& ViewFactory;
 
     TimerWindow Timer;
+    GlobalHotkeyWindow GlobalHotkeys;
+    bool PreviewsHidden = false;
+    GameLogWatcher GameLogs;
+    AlertSound AttackSound;
+    std::map<HWND, ULONGLONG> AttackAlerts;
+    ULONGLONG LastAttackSoundTick = 0;
+    bool GameLogsFollowed = false;
     std::vector<std::unique_ptr<IThumbnailView>> Views;
     std::map<HWND, Point> LastLocations;
 

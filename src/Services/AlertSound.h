@@ -28,8 +28,11 @@ public:
     void Close();
 
 private:
-    static constexpr const wchar_t* ALIAS = L"EveOverlayAlert";
+    // Every instance needs its own MCI alias, otherwise one sound cannot be opened while another instance's is still open
+    static std::wstring MakeAlias();
+
     static constexpr int BUNDLED_SOUND_LENGTH_MS = 1000;
 
+    const std::wstring Alias = MakeAlias();
     bool IsOpen = false;
 };

@@ -10,6 +10,7 @@
 
 #include "Config/TextUtil.h"
 #include "Services/AlertSound.h"
+#include "Universe/ChatLogWatcher.h"
 #include "UI/Theme.h"
 
 const std::string& UniverseTab::GetTitle() const
@@ -66,6 +67,18 @@ void UniverseTab::Draw()
     Widgets::RowDivider();
     Changed = DrawSystemRow() == true || Changed == true;
     Widgets::RowDivider();
+    Changed = Widgets::ToggleRow("Follow my location (from Local chat)", FollowLocation) == true || Changed == true;
+    Widgets::RowDivider();
+    Changed = Widgets::ToggleRow("Count jump bridges as one jump", UseJumpBridges) == true || Changed == true;
+    Widgets::RowDivider();
+    Widgets::RowLabel("Jump bridge list", Theme::Px(190.0f));
+    if (ImGui::Button("Open Jump Bridges.txt", ImVec2(Theme::Px(190.0f), 0.0f)) == true)
+    {
+        OpenJumpBridgesRequested.Emit();
+    }
+
+    Widgets::EndRow();
+    Widgets::RowDivider();
     Changed = Widgets::NumberRow("Jumps", JumpsField, Jumps, MINIMUM_JUMPS, MAXIMUM_JUMPS, 1) == true || Changed == true;
     Widgets::RowDivider();
     Changed = DrawChannelRow() == true || Changed == true;
@@ -97,8 +110,38 @@ void UniverseTab::Draw()
     Widgets::RowDivider();
     Changed = Widgets::SliderInputRow("Volume", VolumeField, SoundVolume, 0, 100).Committed == true || Changed == true;
     Widgets::RowDivider();
-    Changed = DrawSoundRow() == true || Changed == true;
+    Changed = Widgets::ToggleRow("Quieter sound for distant systems", ScaleVolume) == true || Changed == true;
+    Widgets::RowDivider();
+    bool TestPressed = false;
+    Changed = AlertSoundPicker.Draw("Sound", "##Sound", SoundPath, false, TestPressed) == true || Changed == true;
+    if (TestPressed == true)
+    {
+        TestSoundRequested.Emit();
+    }
+
     Widgets::EndCard();
+
+    Widgets::SectionLabel("FILTERING AND PRIORITY");
+    Widgets::BeginCard("##UniverseFilter");
+    Changed = Widgets::ToggleRow("Ignore clear reports and questions", IgnoreClear) == true || Changed == true;
+    Widgets::RowDivider();
+
+    const float KeywordWidth = Theme::Px(260.0f);
+    Widgets::RowLabel("Priority keywords", KeywordWidth);
+    ImGui::SetNextItemWidth(KeywordWidth);
+    ImGui::InputTextWithHint("##Keywords", "e.g. bubble, camp, cyno", Keywords, sizeof(Keywords));
+    Changed = ImGui::IsItemDeactivatedAfterEdit() == true || Changed == true;
+    Widgets::EndRow();
+    Widgets::RowDivider();
+    Changed = AlertSoundPicker.Draw("Priority sound", "##KeywordSound", KeywordSoundPath, true, TestPressed) == true || Changed == true;
+    if (TestPressed == true)
+    {
+        TestKeywordSoundRequested.Emit();
+    }
+    Widgets::EndCard();
+
+    Widgets::SectionLabel("RECENT REPORTS");
+    DrawHistory();
 
     ImGui::Dummy(ImVec2(0.0f, Theme::Px(10.0f)));
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::TEXT_DISABLED);
@@ -122,7 +165,6 @@ void UniverseTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurat
 {
     CopyText(SystemName, sizeof(SystemName), Configuration.UniverseSystem);
     CopyText(IntelChannel, sizeof(IntelChannel), Configuration.UniverseIntelChannel);
-    BundledSounds = AlertSound::GetBundledSounds();
     SavedChannels = Configuration.UniverseSavedChannels;
     Jumps = Configuration.UniverseJumps;
     MapSize = Configuration.UniverseMapSize;
@@ -134,6 +176,12 @@ void UniverseTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurat
     SoundVolume = Configuration.UniverseAlertVolume;
     AlertTimeout = Configuration.UniverseAlertTimeout;
     SoundPath = Configuration.UniverseAlertSoundPath;
+    IgnoreClear = Configuration.UniverseIgnoreClear;
+    ScaleVolume = Configuration.UniverseScaleVolumeByDistance;
+    FollowLocation = Configuration.UniverseFollowLocation;
+    UseJumpBridges = Configuration.UniverseUseJumpBridges;
+    CopyText(Keywords, sizeof(Keywords), Configuration.UniverseKeywords);
+    KeywordSoundPath = Configuration.UniverseKeywordSoundPath;
 }
 
 void UniverseTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
@@ -151,6 +199,68 @@ void UniverseTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) co
     Configuration.UniverseAlertVolume = SoundVolume;
     Configuration.UniverseAlertTimeout = AlertTimeout;
     Configuration.UniverseAlertSoundPath = SoundPath;
+    Configuration.UniverseIgnoreClear = IgnoreClear;
+    Configuration.UniverseScaleVolumeByDistance = ScaleVolume;
+    Configuration.UniverseFollowLocation = FollowLocation;
+    Configuration.UniverseUseJumpBridges = UseJumpBridges;
+    Configuration.UniverseKeywords = TextUtil::Trim(Keywords);
+    Configuration.UniverseKeywordSoundPath = KeywordSoundPath;
+}
+
+void UniverseTab::SetHistory(const std::vector<IntelHistoryEntry>* const NewHistory)
+{
+    History = NewHistory;
+}
+
+void UniverseTab::SetSystem(const std::string& Name)
+{
+    if (TextUtil::EqualsIgnoreCase(Name, SystemName) == true)
+    {
+        return;
+    }
+
+    CopyText(SystemName, sizeof(SystemName), Name);
+    SettingsChanged.Emit();
+}
+
+void UniverseTab::DrawHistory()
+{
+    Widgets::BeginCard("##UniverseHistory");
+
+    const bool IsEmpty = History == nullptr || History->empty() == true;
+    if (IsEmpty == true)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TEXT_DISABLED);
+        ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+        ImGui::TextWrapped("Systems reported in your intel channel appear here once the map is showing.");
+        ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+        ImGui::PopStyleColor();
+        Widgets::EndCard();
+        return;
+    }
+
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+    if (ImGui::Button("Clear list") == true)
+    {
+        HistoryClearRequested.Emit();
+    }
+
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(4.0f)));
+    if (ImGui::BeginChild("##HistoryList", ImVec2(0.0f, Theme::Px(HISTORY_HEIGHT)), ImGuiChildFlags_None) == true)
+    {
+        for (const IntelHistoryEntry& Entry : *History)
+        {
+            const std::string Distance = Entry.Jumps == 0 ? "home" : std::to_string(Entry.Jumps) + (Entry.Jumps == 1 ? " jump" : " jumps");
+            const std::string Line = Entry.Time + "  " + Entry.System + " (" + Distance + ")  " + Entry.Sender + ": " + Entry.Text;
+            ImGui::PushStyleColor(ImGuiCol_Text, Entry.Priority == true ? Theme::ACCENT : ImGui::GetStyleColorVec4(ImGuiCol_Text));
+            ImGui::TextWrapped("%s", Line.c_str());
+            ImGui::PopStyleColor();
+        }
+    }
+
+    ImGui::EndChild();
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+    Widgets::EndCard();
 }
 
 void UniverseTab::AddSavedChannel(const std::string& Channel)
@@ -214,119 +324,6 @@ void UniverseTab::RebuildFilter()
     Matches.insert(Matches.end(), Contained.begin(), Contained.end());
     AppliedFilter = Filter;
     FilterApplied = true;
-}
-
-std::string UniverseTab::SoundDisplayName(const std::filesystem::path& Sound)
-{
-    const std::string Stem = TextUtil::ToUtf8(Sound.stem().wstring());
-    std::string Name;
-    for (size_t Index = 0; Index < Stem.size(); Index++)
-    {
-        const bool StartsWord = Index > 0 && std::isupper(static_cast<unsigned char>(Stem[Index])) != 0 && std::islower(static_cast<unsigned char>(Stem[Index - 1])) != 0;
-        if (StartsWord == true)
-        {
-            Name += ' ';
-        }
-
-        Name += Index == 0 ? static_cast<char>(std::toupper(static_cast<unsigned char>(Stem[Index]))) : Stem[Index];
-    }
-
-    return Name;
-}
-
-std::string UniverseTab::GetSoundLabel() const
-{
-    if (SoundPath.empty() == true)
-    {
-        return SoundDisplayName(AlertSound::GetDefaultSoundPath());
-    }
-
-    const std::filesystem::path Sound = TextUtil::FromUtf8(SoundPath);
-    if (Sound.has_parent_path() == false)
-    {
-        return SoundDisplayName(Sound);
-    }
-
-    return "Custom: " + TextUtil::ToUtf8(Sound.filename().wstring());
-}
-
-bool UniverseTab::IsSoundSelected(const std::filesystem::path& Bundled) const
-{
-    const std::filesystem::path Selected = SoundPath.empty() == true ? AlertSound::GetDefaultSoundPath().filename() : std::filesystem::path(TextUtil::FromUtf8(SoundPath));
-    return Selected.has_parent_path() == false && TextUtil::EqualsIgnoreCase(TextUtil::ToUtf8(Selected.wstring()), TextUtil::ToUtf8(Bundled.filename().wstring())) == true;
-}
-
-// A dropdown of the bundled sounds plus a custom file option, with a button to hear the current choice
-bool UniverseTab::DrawSoundRow()
-{
-    const float ComboWidth = Theme::Px(190.0f);
-    const float TestWidth = Theme::Px(70.0f);
-    const float Gap = Theme::Px(6.0f);
-    Widgets::RowLabel("Sound", ComboWidth + Gap + TestWidth);
-
-    // SameLine after the label would otherwise pull the later controls up to the label's line instead of this one
-    const float RowY = ImGui::GetCursorPosY();
-    bool Changed = false;
-
-    ImGui::SetNextItemWidth(ComboWidth);
-    if (ImGui::BeginCombo("##Sound", GetSoundLabel().c_str()) == true)
-    {
-        if (ImGui::IsWindowAppearing() == true)
-        {
-            BundledSounds = AlertSound::GetBundledSounds();
-        }
-
-        for (const std::filesystem::path& Bundled : BundledSounds)
-        {
-            if (ImGui::Selectable(SoundDisplayName(Bundled).c_str(), IsSoundSelected(Bundled)) == true)
-            {
-                SoundPath = TextUtil::ToUtf8(Bundled.filename().wstring());
-                Changed = true;
-            }
-        }
-
-        ImGui::Separator();
-        if (ImGui::Selectable("Custom file...") == true)
-        {
-            Changed = BrowseForSound() == true || Changed == true;
-        }
-
-        ImGui::EndCombo();
-    }
-
-    Widgets::HoverTip("Pick one of the built-in alert sounds, or choose your own wav, mp3 or wma file.");
-
-    ImGui::SameLine(0.0f, Gap);
-    ImGui::SetCursorPosY(RowY);
-    const bool TestPressed = ImGui::Button("Test", ImVec2(TestWidth, 0.0f));
-    Widgets::HoverTip("Play the alert sound at the current volume.");
-    if (TestPressed == true)
-    {
-        TestSoundRequested.Emit();
-    }
-
-    Widgets::EndRow();
-    return Changed;
-}
-
-bool UniverseTab::BrowseForSound()
-{
-    wchar_t FilePath[MAX_PATH] = {};
-    OPENFILENAMEW Dialog = {};
-    Dialog.lStructSize = sizeof(Dialog);
-    Dialog.hwndOwner = ::GetActiveWindow();
-    Dialog.lpstrFilter = L"Audio files (*.wav;*.mp3;*.wma)\0*.wav;*.mp3;*.wma\0All files (*.*)\0*.*\0";
-    Dialog.lpstrFile = FilePath;
-    Dialog.nMaxFile = MAX_PATH;
-    Dialog.lpstrTitle = L"Choose an alert sound";
-    Dialog.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER;
-    if (::GetOpenFileNameW(&Dialog) == FALSE)
-    {
-        return false;
-    }
-
-    SoundPath = TextUtil::ToUtf8(FilePath);
-    return true;
 }
 
 void UniverseTab::DrawRegionRow()
@@ -401,21 +398,40 @@ bool UniverseTab::DrawSystemRow()
             ImGui::CloseCurrentPopup();
         }
 
-        if (ImGui::BeginChild("##Systems", ImVec2(0.0f, Theme::Px(LIST_HEIGHT)), ImGuiChildFlags_None) == true)
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, Theme::Shade(Theme::SURFACE, 0.35f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(Theme::Px(4.0f), Theme::Px(4.0f)));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(Theme::Px(8.0f), Theme::Px(2.0f)));
+        const bool ListOpen = ImGui::BeginChild("##Systems", ImVec2(0.0f, Theme::Px(LIST_HEIGHT)), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+        ImGui::PopStyleVar(2);
+        ImGui::PopStyleColor();
+        if (ListOpen == true)
         {
+            const float RowHeight = ImGui::GetTextLineHeight() + Theme::Px(10.0f);
+            const bool HasTypedFilter = Filter[0] != '\0';
             ImGuiListClipper Clipper;
-            Clipper.Begin(static_cast<int>(Matches.size()));
+            Clipper.Begin(static_cast<int>(Matches.size()), RowHeight + ImGui::GetStyle().ItemSpacing.y);
             while (Clipper.Step() == true)
             {
                 for (int Row = Clipper.DisplayStart; Row < Clipper.DisplayEnd; Row++)
                 {
                     const std::string& Name = Listing->Names[static_cast<size_t>(Matches[static_cast<size_t>(Row)])];
                     const bool IsCurrent = TextUtil::EqualsIgnoreCase(Name, SystemName);
-                    if (ImGui::Selectable(Name.c_str(), IsCurrent) == true)
+                    const bool IsEnterTarget = Row == 0 && HasTypedFilter == true;
+                    if (ImGui::Selectable(Name.c_str(), IsCurrent == true || IsEnterTarget == true, ImGuiSelectableFlags_None, ImVec2(0.0f, RowHeight)) == true)
                     {
                         Picked = SelectSystem(Matches[static_cast<size_t>(Row)]);
                         ImGui::CloseCurrentPopup();
                     }
+
+                    if (IsEnterTarget == false)
+                    {
+                        continue;
+                    }
+
+                    const char* const Hint = "Enter";
+                    const ImVec2 HintSize = ImGui::CalcTextSize(Hint);
+                    const ImVec2 RowMax = ImGui::GetItemRectMax();
+                    ImGui::GetWindowDrawList()->AddText(ImVec2(RowMax.x - HintSize.x - Theme::Px(8.0f), ImGui::GetItemRectMin().y + (RowHeight - HintSize.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_TextDisabled), Hint);
                 }
             }
         }
@@ -440,6 +456,54 @@ bool UniverseTab::SelectSystem(const int NameIndex)
     return true;
 }
 
+bool UniverseTab::IsChannelWatched(const std::string& Name) const
+{
+    for (const std::string& Part : TextUtil::Split(IntelChannel, ','))
+    {
+        if (TextUtil::EqualsIgnoreCase(TextUtil::Trim(Part), Name) == true)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void UniverseTab::ToggleChannel(const std::string& Name)
+{
+    std::vector<std::string> Watched;
+    bool WasWatched = false;
+    for (const std::string& Part : TextUtil::Split(IntelChannel, ','))
+    {
+        const std::string Trimmed = TextUtil::Trim(Part);
+        if (Trimmed.empty() == true)
+        {
+            continue;
+        }
+
+        if (TextUtil::EqualsIgnoreCase(Trimmed, Name) == true)
+        {
+            WasWatched = true;
+            continue;
+        }
+
+        Watched.push_back(Trimmed);
+    }
+
+    if (WasWatched == false)
+    {
+        Watched.push_back(Name);
+    }
+
+    std::string Joined;
+    for (const std::string& Part : Watched)
+    {
+        Joined += Joined.empty() == true ? Part : ", " + Part;
+    }
+
+    CopyText(IntelChannel, sizeof(IntelChannel), Joined);
+}
+
 bool UniverseTab::DrawChannelRow()
 {
     const float FieldWidth = Theme::Px(220.0f);
@@ -453,6 +517,7 @@ bool UniverseTab::DrawChannelRow()
         if (ImGui::IsWindowAppearing() == true)
         {
             NewChannel[0] = '\0';
+            FoundChannels = ChatLogWatcher::FindChannels(ChatLogWatcher::GetDefaultDirectory(), FOUND_CHANNEL_AGE);
             ImGui::SetKeyboardFocusHere();
         }
 
@@ -502,6 +567,28 @@ bool UniverseTab::DrawChannelRow()
         {
             SavedChannels.erase(SavedChannels.begin() + RemoveIndex);
             Changed = true;
+        }
+
+        ImGui::Separator();
+        ImGui::TextDisabled("Found in your chat logs (tick to watch)");
+        if (FoundChannels.empty() == true)
+        {
+            ImGui::TextDisabled("None. Open the channel in the game first.");
+        }
+
+        for (const std::string& Found : FoundChannels)
+        {
+            if (TextUtil::EqualsIgnoreCase(Found, "Local") == true)
+            {
+                continue;
+            }
+
+            bool Watched = IsChannelWatched(Found);
+            if (ImGui::Checkbox(Found.c_str(), &Watched) == true)
+            {
+                ToggleChannel(Found);
+                Changed = true;
+            }
         }
 
         ImGui::EndCombo();

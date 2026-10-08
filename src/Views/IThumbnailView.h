@@ -49,6 +49,9 @@ public:
     virtual void SetOpacity(double Opacity) = 0;
     virtual void SetFrames(bool Enable) = 0;
     virtual void SetTopMost(bool EnableTopMost) = 0;
+
+    // A locked preview cannot be moved or resized with the mouse
+    virtual void SetLocked(bool Locked) = 0;
     virtual void SetHighlight(bool Enabled, Color HighlightColor, int Width) = 0;
     virtual void ZoomIn(ZoomAnchor Anchor, int ZoomFactor) = 0;
     virtual void ZoomOut() = 0;

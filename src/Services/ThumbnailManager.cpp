@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <iterator>
+
+#include "Config/TextUtil.h"
 
 ThumbnailManager::ThumbnailManager(ThumbnailConfiguration& ConfigurationReference, ConfigurationStorage& StorageReference, IProcessMonitor& ProcessMonitorReference,
     IWindowManager& WindowManagerReference, IThumbnailViewFactory& ViewFactoryReference)
@@ -26,15 +29,129 @@ void ThumbnailManager::Start()
     Timer.Start(static_cast<UINT>(Configuration.ThumbnailRefreshPeriod), [this]()
     {
         UpdateThumbnailsList();
+        PollGameLogs();
         RefreshThumbnails();
     });
 
+    UpdateHotkeys();
     RefreshThumbnails();
 }
 
 void ThumbnailManager::Stop()
 {
     Timer.Stop();
+    GlobalHotkeys.Clear();
+}
+
+void ThumbnailManager::UpdateHotkeys()
+{
+    for (const std::unique_ptr<IThumbnailView>& View : Views)
+    {
+        View->RegisterHotkey(Configuration.GetClientHotkey(View->GetTitle()));
+    }
+
+    GlobalHotkeys.Clear();
+    GlobalHotkeys.Add(Hotkey::Parse(Configuration.TogglePreviewsHotkey), [this]()
+    {
+        TogglePreviews();
+    });
+    GlobalHotkeys.Add(Hotkey::Parse(Configuration.MinimizeAllHotkey), [this]()
+    {
+        MinimizeAllClients();
+    });
+
+    for (size_t GroupIndex = 0; GroupIndex < Configuration.CycleGroups.size(); GroupIndex++)
+    {
+        GlobalHotkeys.Add(Configuration.CycleGroups[GroupIndex].Next, [this, GroupIndex]()
+        {
+            CycleClients(GroupIndex, 1);
+        });
+        GlobalHotkeys.Add(Configuration.CycleGroups[GroupIndex].Previous, [this, GroupIndex]()
+        {
+            CycleClients(GroupIndex, -1);
+        });
+    }
+}
+
+std::vector<IThumbnailView*> ThumbnailManager::GetCycleOrder(const CycleGroup& Group) const
+{
+    std::vector<IThumbnailView*> Order;
+    for (const std::unique_ptr<IThumbnailView>& View : Views)
+    {
+        if (IsManageableThumbnail(*View) == false)
+        {
+            continue;
+        }
+
+        const bool IsMember = Group.Members.empty() == true || std::find(Group.Members.begin(), Group.Members.end(), View->GetTitle()) != Group.Members.end();
+        if (IsMember == true)
+        {
+            Order.push_back(View.get());
+        }
+    }
+
+    // Reading order of the previews on screen, so the hotkey steps through the clients the way the player sees them
+    std::sort(Order.begin(), Order.end(), [](const IThumbnailView* const Left, const IThumbnailView* const Right)
+    {
+        const Point LeftLocation = Left->GetThumbnailLocation();
+        const Point RightLocation = Right->GetThumbnailLocation();
+        if (LeftLocation.Y != RightLocation.Y)
+        {
+            return LeftLocation.Y < RightLocation.Y;
+        }
+
+        return LeftLocation.X < RightLocation.X;
+    });
+
+    return Order;
+}
+
+void ThumbnailManager::CycleClients(const size_t GroupIndex, const int Direction)
+{
+    if (GroupIndex >= Configuration.CycleGroups.size())
+    {
+        return;
+    }
+
+    const std::vector<IThumbnailView*> Order = GetCycleOrder(Configuration.CycleGroups[GroupIndex]);
+    if (Order.empty() == true)
+    {
+        return;
+    }
+
+    const int Count = static_cast<int>(Order.size());
+    int Current = -1;
+    for (int Index = 0; Index < Count; Index++)
+    {
+        if (Order[static_cast<size_t>(Index)]->GetId() == ActiveClient.Handle)
+        {
+            Current = Index;
+        }
+    }
+
+    const int Target = Current < 0 ? (Direction > 0 ? 0 : Count - 1) : (Current + Direction + Count) % Count;
+    ThumbnailActivated(Order[static_cast<size_t>(Target)]->GetId());
+}
+
+void ThumbnailManager::TogglePreviews()
+{
+    PreviewsHidden = PreviewsHidden == false;
+    RefreshThumbnails();
+}
+
+void ThumbnailManager::MinimizeAllClients()
+{
+    for (const std::unique_ptr<IThumbnailView>& View : Views)
+    {
+        if (IsManageableThumbnail(*View) == false || Configuration.IsPriorityClient(View->GetTitle()) == true)
+        {
+            continue;
+        }
+
+        WindowManagerInstance.MinimizeWindow(View->GetId(), true);
+    }
+
+    RefreshThumbnails();
 }
 
 void ThumbnailManager::UpdateThumbnailsSize()
@@ -163,6 +280,30 @@ void ThumbnailManager::DetachCallbacks(IThumbnailView& View)
     View.ThumbnailDeactivated = nullptr;
 }
 
+std::unique_ptr<IThumbnailView> ThumbnailManager::CreateView(const ProcessInfo& Process)
+{
+    std::unique_ptr<IThumbnailView> View = ViewFactory.Create(Process.Handle, Process.Title, Configuration.ThumbnailSize);
+    View->SetOverlayEnabled(Configuration.ShowThumbnailOverlays);
+    View->SetFrames(Configuration.ShowThumbnailFrames);
+    // Size limits go after the frames, otherwise the window gets resized needlessly
+    View->SetSizeLimitations(Configuration.ThumbnailMinimumSize, Configuration.ThumbnailMaximumSize);
+    View->SetTopMost(Configuration.ShowThumbnailsAlwaysOnTop);
+
+    const Point Location = IsManageableThumbnail(*View) == true
+        ? Configuration.GetThumbnailLocation(View->GetTitle(), ActiveClient.Title, View->GetThumbnailLocation())
+        : Configuration.GetDefaultThumbnailLocation();
+    View->SetThumbnailLocation(Location);
+    LastLocations[View->GetId()] = View->GetThumbnailLocation();
+
+    AttachCallbacks(*View);
+
+    View->RegisterHotkey(Configuration.GetClientHotkey(View->GetTitle()));
+
+    ApplyClientLayout(View->GetId(), View->GetTitle());
+
+    return View;
+}
+
 void ThumbnailManager::UpdateThumbnailsList()
 {
     const ProcessUpdate Update = ProcessMonitorInstance.GetUpdatedProcesses();
@@ -172,24 +313,7 @@ void ThumbnailManager::UpdateThumbnailsList()
 
     for (const ProcessInfo& Process : Update.Added)
     {
-        std::unique_ptr<IThumbnailView> View = ViewFactory.Create(Process.Handle, Process.Title, Configuration.ThumbnailSize);
-        View->SetOverlayEnabled(Configuration.ShowThumbnailOverlays);
-        View->SetFrames(Configuration.ShowThumbnailFrames);
-        // Size limits go after the frames, otherwise the window gets resized needlessly
-        View->SetSizeLimitations(Configuration.ThumbnailMinimumSize, Configuration.ThumbnailMaximumSize);
-        View->SetTopMost(Configuration.ShowThumbnailsAlwaysOnTop);
-
-        const Point Location = IsManageableThumbnail(*View) == true
-            ? Configuration.GetThumbnailLocation(View->GetTitle(), ActiveClient.Title, View->GetThumbnailLocation())
-            : Configuration.GetDefaultThumbnailLocation();
-        View->SetThumbnailLocation(Location);
-        LastLocations[View->GetId()] = View->GetThumbnailLocation();
-
-        AttachCallbacks(*View);
-
-        View->RegisterHotkey(Configuration.GetClientHotkey(View->GetTitle()));
-
-        ApplyClientLayout(View->GetId(), View->GetTitle());
+        std::unique_ptr<IThumbnailView> View = CreateView(Process);
 
         if (View->GetTitle() != DEFAULT_CLIENT_TITLE)
         {
@@ -264,6 +388,8 @@ void ThumbnailManager::UpdateThumbnailsList()
             {
                 ExternalApplication = nullptr;
             }
+
+            AttackAlerts.erase(Process.Handle);
 
             View.UnregisterHotkey();
             DetachCallbacks(View);
@@ -341,6 +467,11 @@ void ThumbnailManager::RefreshThumbnails()
         HideThumbnailsDelay = Configuration.HideThumbnailsDelay;
     }
 
+    if (PreviewsHidden == true)
+    {
+        HideAllThumbnails = true;
+    }
+
     RefreshCycleCount++;
 
     bool ForceRefresh = false;
@@ -404,6 +535,7 @@ void ThumbnailManager::RefreshThumbnails()
         }
 
         View.SetOverlayEnabled(Configuration.ShowThumbnailOverlays);
+        View.SetLocked(Configuration.LockThumbnails);
 
         ApplyHighlight(View);
 
@@ -417,8 +549,102 @@ void ThumbnailManager::RefreshThumbnails()
     }
 }
 
+std::wstring ThumbnailManager::GetCharacterName(const std::wstring& Title)
+{
+    constexpr const wchar_t* PREFIX = L"EVE - ";
+    const size_t PrefixLength = std::char_traits<wchar_t>::length(PREFIX);
+    if (Title.size() <= PrefixLength || Title.compare(0, PrefixLength, PREFIX) != 0)
+    {
+        return std::wstring();
+    }
+
+    return Title.substr(PrefixLength);
+}
+
+bool ThumbnailManager::IsAttackAlertActive(const HWND Id) const
+{
+    const std::map<HWND, ULONGLONG>::const_iterator Alert = AttackAlerts.find(Id);
+    return Alert != AttackAlerts.end() && ::GetTickCount64() < Alert->second;
+}
+
+void ThumbnailManager::ExpireAttackAlerts()
+{
+    const ULONGLONG Now = ::GetTickCount64();
+    for (std::map<HWND, ULONGLONG>::iterator Alert = AttackAlerts.begin(); Alert != AttackAlerts.end();)
+    {
+        Alert = Now >= Alert->second ? AttackAlerts.erase(Alert) : std::next(Alert);
+    }
+}
+
+void ThumbnailManager::PollGameLogs()
+{
+    if (Configuration.AttackAlertsEnabled == false)
+    {
+        if (GameLogsFollowed == true)
+        {
+            GameLogs.Reset();
+            GameLogsFollowed = false;
+        }
+
+        AttackAlerts.clear();
+        return;
+    }
+
+    GameLogsFollowed = true;
+    for (const GameLogEvent& Event : GameLogs.Poll())
+    {
+        RaiseAttackAlert(Event);
+    }
+
+    ExpireAttackAlerts();
+}
+
+void ThumbnailManager::RaiseAttackAlert(const GameLogEvent& Event)
+{
+    const bool Wanted = Event.Kind == GameLogEventKind::Damage ? Configuration.AttackAlertOnDamage : Configuration.AttackAlertOnWarpDisruption;
+    if (Wanted == false)
+    {
+        return;
+    }
+
+    const std::wstring Character = TextUtil::ToLower(TextUtil::FromUtf8(Event.Character));
+    for (const std::unique_ptr<IThumbnailView>& View : Views)
+    {
+        if (TextUtil::ToLower(GetCharacterName(View->GetTitle())) != Character)
+        {
+            continue;
+        }
+
+        // The pilot is looking at this client already
+        if (View->GetId() == ActiveClient.Handle)
+        {
+            return;
+        }
+
+        const ULONGLONG Now = ::GetTickCount64();
+        AttackAlerts[View->GetId()] = Now + static_cast<ULONGLONG>(Configuration.AttackAlertSeconds) * 1000ULL;
+        ApplyHighlight(*View);
+
+        if (Configuration.AttackAlertSoundEnabled == true && Now - LastAttackSoundTick >= ATTACK_SOUND_GAP_MS)
+        {
+            LastAttackSoundTick = Now;
+            AttackSound.Play(TextUtil::FromUtf8(Configuration.AttackAlertSoundPath), Configuration.AttackAlertVolume);
+        }
+
+        return;
+    }
+}
+
 void ThumbnailManager::ApplyHighlight(IThumbnailView& View) const
 {
+    if (IsAttackAlertActive(View.GetId()) == true)
+    {
+        const bool Bright = (::GetTickCount64() / ATTACK_BLINK_MS) % 2 == 0;
+        const int Thickness = std::max(Configuration.ActiveClientHighlightThickness, ATTACK_MINIMUM_THICKNESS);
+        View.SetHighlight(true, Bright == true ? Color::FromRgb(0xFF2020) : Color::FromRgb(0x701010), Thickness);
+        return;
+    }
+
     const bool IsActiveHighlight = Configuration.EnableActiveClientHighlight == true && View.GetId() == ActiveClient.Handle;
     const int Thickness = (IsActiveHighlight == true && GroupMoveActive == false) ? Configuration.ActiveClientHighlightThickness : GROUP_MOVE_HIGHLIGHT_THICKNESS;
     View.SetHighlight(GroupMoveActive == true || IsActiveHighlight == true, Configuration.ActiveClientHighlightColor, Thickness);

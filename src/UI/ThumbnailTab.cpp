@@ -31,6 +31,8 @@ void ThumbnailTab::Draw()
     bool BehaviorChanged = Widgets::ToggleRow("Snap to the nearest thumbnail", SnapEnabled);
     Widgets::RowDivider();
     BehaviorChanged = Widgets::ToggleRow("Move all thumbnails together", MoveAll) == true || BehaviorChanged == true;
+    Widgets::RowDivider();
+    BehaviorChanged = Widgets::ToggleRow("Lock previews in place", LockPreviews) == true || BehaviorChanged == true;
     Widgets::EndCard();
 
     if (WidthChanged == true || HeightChanged == true)
@@ -51,6 +53,7 @@ void ThumbnailTab::LoadFromConfiguration(const ThumbnailConfiguration& Configura
     OpacityPercent = std::clamp(Percent, MINIMUM_OPACITY, MAXIMUM_OPACITY);
 
     MoveAll = Configuration.MoveAllThumbnails;
+    LockPreviews = Configuration.LockThumbnails;
     SnapEnabled = Configuration.EnableThumbnailSnap;
     MinimumSize = Configuration.ThumbnailMinimumSize;
     MaximumSize = Configuration.ThumbnailMaximumSize;
@@ -60,9 +63,15 @@ void ThumbnailTab::LoadFromConfiguration(const ThumbnailConfiguration& Configura
 void ThumbnailTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
 {
     Configuration.MoveAllThumbnails = MoveAll;
+    Configuration.LockThumbnails = LockPreviews;
     Configuration.EnableThumbnailSnap = SnapEnabled;
     Configuration.ThumbnailOpacity = static_cast<double>(OpacityPercent) / 100.0;
     Configuration.ThumbnailSize = Size{std::clamp(ThumbnailWidth, MinimumSize.Width, MaximumSize.Width), std::clamp(ThumbnailHeight, MinimumSize.Height, MaximumSize.Height)};
+}
+
+void ThumbnailTab::SetMoveAll(const bool Enabled)
+{
+    MoveAll = Enabled;
 }
 
 void ThumbnailTab::SetThumbnailSize(const Size NewSize)

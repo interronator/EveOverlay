@@ -8,6 +8,8 @@
 ## Data
 - The EVE universe map in `universeData/` (systems, regions, stargate links, sovereignty snapshot) was compiled from [DOTLAN EVE Maps](https://evemaps.dotlan.net/).
 
+- The ship, drone and structure list in `universeData/types.tsv` comes from CCP's [Static Data Export](https://developers.eveonline.com/static-data). `tools/Build-ShipData.ps1` rebuilds it from a fresh export.
+
 ## Inspiration
 - The original EVE-O Preview, which this project rewrites in C++.
 

@@ -8,6 +8,7 @@
 #include "Config/ConfigurationStorage.h"
 #include "Config/ThumbnailConfiguration.h"
 #include "UI/ClientsTab.h"
+#include "UI/HotkeysTab.h"
 #include "UI/ITabPage.h"
 #include "UI/OrganizerTab.h"
 #include "UI/ThumbnailTab.h"
@@ -19,10 +20,11 @@ public:
     Signal<> FrameSettingsChanged;
     Signal<> ThumbnailSizeChanged;
     Signal<bool> ClientsOpenChanged;
+    Signal<> HotkeysChanged;
     Signal<const ThumbnailArrangement&> ArrangeRequested;
 
     SettingsPresenter(ThumbnailConfiguration& ConfigurationReference, ConfigurationStorage& StorageReference,
-        const std::vector<ITabPage*>& TabPages, ThumbnailTab& ThumbnailTabReference, ClientsTab& ClientsTabReference, OrganizerTab& OrganizerTabReference);
+        const std::vector<ITabPage*>& TabPages, ThumbnailTab& ThumbnailTabReference, ClientsTab& ClientsTabReference, OrganizerTab& OrganizerTabReference, HotkeysTab& HotkeysTabReference);
 
     void LoadSettings();
     void AddThumbnails(const std::vector<std::wstring>& Titles);
@@ -43,6 +45,7 @@ private:
     ThumbnailTab& ThumbnailPage;
     ClientsTab& ClientsPage;
     OrganizerTab& OrganizerPage;
+    HotkeysTab& HotkeysPage;
     std::set<std::wstring> OpenClients;
     bool ClientsOpen = false;
 };

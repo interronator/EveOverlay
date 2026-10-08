@@ -25,3 +25,8 @@ HRESULT DwmApi::UpdateThumbnailProperties(const HTHUMBNAIL Thumbnail, const DWM_
 {
     return ::DwmUpdateThumbnailProperties(Thumbnail, &Properties);
 }
+
+HRESULT DwmApi::QuerySourceSize(const HTHUMBNAIL Thumbnail, SIZE* const SourceSize)
+{
+    return ::DwmQueryThumbnailSourceSize(Thumbnail, SourceSize);
+}

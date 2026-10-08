@@ -16,7 +16,9 @@ extern CAppModule _Module;
 #include "Application/Signal.h"
 #include "Config/ThumbnailConfiguration.h"
 #include "Universe/ChatLogWatcher.h"
+#include "Universe/IntelHistory.h"
 #include "Services/AlertSound.h"
+#include "Universe/ShipCatalog.h"
 #include "Universe/SystemListing.h"
 #include "Universe/UniverseData.h"
 #include "Universe/UniverseMapOptions.h"
@@ -43,7 +45,16 @@ public:
     // Emitted the first time a channel reports a system on the map, so the settings page can remember it
     Signal<const std::string&> IntelChannelWorked;
 
-    UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath);
+    // Emitted with the new home system when "follow my location" moves the map
+    Signal<const std::string&> HomeSystemFollowed;
+
+    // The sound is quieter for systems further from home: full volume at home, falling to this share at the edge of the map
+    static constexpr float FAR_VOLUME_SHARE = 0.4f;
+    static constexpr size_t MAX_HISTORY = 200;
+
+    static float DistanceVolumeScale(const int Jumps, const int MaxJumps);
+
+    UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath, std::filesystem::path JumpBridgesPath);
     UniverseMapWindow(const UniverseMapWindow&) = delete;
     UniverseMapWindow& operator=(const UniverseMapWindow&) = delete;
 
@@ -53,6 +64,7 @@ public:
 
     // Also used by the settings page's test button, so it ignores the enabled flag
     void PlayAlert();
+    void PlayKeywordAlert();
 
     // Live preview while the size slider is dragged; the value is saved separately once the drag ends
     void SetMapSize(const int MapSize);
@@ -67,6 +79,11 @@ public:
     // Empty until the data has loaded
     const SystemListing& GetSystemListing() const;
 
+    // Newest report first; the revision changes whenever the list does, so a viewer knows when to look again
+    const std::vector<IntelHistoryEntry>& GetHistory() const;
+    unsigned GetHistoryRevision() const;
+    void ClearHistory();
+
 private:
     static constexpr const wchar_t* SETTINGS_SECTION = L"UniverseMap";
     static constexpr UINT_PTR POLL_TIMER_ID = 1;
@@ -78,6 +95,8 @@ private:
     static constexpr UINT ANIMATION_INTERVAL_MS = 33;
     static constexpr double FLASH_START_HZ = 3.0;
     static constexpr double FLASH_END_HZ = 0.4;
+    static constexpr ULONGLONG CLEAR_PULSE_MS = 5000;
+    static constexpr double CLEAR_PULSE_HZ = 1.5;
     static constexpr int MAX_JUMPS = ThumbnailConfiguration::UNIVERSE_MAX_JUMPS;
     static constexpr int MINIMUM_SIZE = 200;
 
@@ -121,9 +140,17 @@ private:
     void RestorePosition();
     void SavePosition() const;
     void RebuildNeighborhood();
+    void LoadUniverse();
+
+    // The links are part of the loaded data, so a change to the list or to the setting needs the data loaded again
+    void ReloadIfBridgesChanged();
     std::vector<UniverseMapView::NodeAlert> BuildHighlights() const;
     void AnimateAlerts();
     void PollIntel();
+    void PollLocation();
+    void FollowSystem(const std::string& SystemName);
+    void RecordReport(const ChatMessage& Message, const int System, const bool Priority);
+    void PlayReportSound(const bool Priority, const int ClosestJumps);
 
     // GDI+ draws straight into a premultiplied 32-bit surface, which UpdateLayeredWindow composites with per-pixel alpha
     void Redraw();
@@ -145,11 +172,29 @@ private:
     bool Loaded = false;
     UniverseMapView View;
     ChatLogWatcher Watcher;
+    ChatLogWatcher LocalWatcher;
     SystemListing Listing;
     std::vector<int> NodeSystems;
+    std::unordered_map<int, int> SystemJumps;
+    std::vector<IntelHistoryEntry> History;
+    unsigned HistoryRevision = 0;
+    std::vector<std::string> Keywords;
+    std::wstring KeywordSoundPath;
+    bool IgnoreClear = true;
+    bool ScaleVolumeByDistance = true;
+    bool FollowLocation = false;
+    bool FollowCheckPending = false;
+    bool UseJumpBridges = true;
+    bool BridgesApplied = false;
+    std::filesystem::path BridgesPath;
+    std::filesystem::file_time_type BridgesStamp;
+    int BridgeCount = 0;
     std::unordered_set<int> Candidates;
     std::unordered_set<std::string> WorkedChannels;
     std::unordered_map<int, ULONGLONG> AlertStart;
+    std::unordered_map<int, ULONGLONG> ClearStart;
+    std::unordered_map<int, ULONGLONG> CautionStart;
+    ShipCatalog Ships;
     ULONGLONG AlertDurationMs = 300000;
     std::string Center = "Jita";
     std::string Channel = "Intel";

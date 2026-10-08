@@ -20,6 +20,7 @@ private:
     bool MinimizeToTray = false;
     bool WindowOnTop = false;
     bool LightTheme = false;
+    bool ShowDevelopingTabs = false;
     bool TrackClientLocations = false;
     bool HideActiveClient = false;
     bool MinimizeInactive = false;

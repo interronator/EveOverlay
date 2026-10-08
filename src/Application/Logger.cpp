@@ -20,6 +20,11 @@ void Logger::Warning(const std::string& Message)
     Write("WARN ", Message);
 }
 
+void Logger::Info(const std::string& Message)
+{
+    Write("INFO ", Message);
+}
+
 void Logger::SetDirectory(const std::filesystem::path& NewDirectory)
 {
     const std::lock_guard<std::timed_mutex> Guard(Lock);

@@ -40,7 +40,14 @@ private:
         Size ThumbnailConfiguration::* Member;
     };
 
+    struct StringProperty
+    {
+        const char* Key;
+        std::string ThumbnailConfiguration::* Member;
+    };
+
     static const BoolProperty BOOL_PROPERTIES[];
+    static const StringProperty STRING_PROPERTIES[];
     static const IntProperty INT_PROPERTIES[];
     static const SizeProperty SIZE_PROPERTIES[];
 
@@ -57,6 +64,7 @@ private:
     void LoadClientHotkeys(const Json& Value);
     void LoadDisabledThumbnails(const Json& Value);
     void LoadSavedChannels(const Json& Value);
+    void LoadCycleGroups(const Json& Value);
     void LoadPriorityClients(const Json& Value);
 
     ThumbnailConfiguration& Configuration;

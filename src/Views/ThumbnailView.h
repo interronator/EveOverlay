@@ -60,6 +60,7 @@ public:
     void SetOpacity(double Opacity) override;
     void SetFrames(const bool Enable) override;
     void SetTopMost(const bool EnableTopMost) override;
+    void SetLocked(const bool Locked) override;
     void SetHighlight(const bool Enabled, const Color HighlightColor, const int Width) override;
     void ZoomIn(const ZoomAnchor Anchor, const int ZoomFactor) override;
     void ZoomOut() override;
@@ -83,6 +84,8 @@ private:
     static constexpr double OPACITY_EPSILON = 0.1;
 
     static BYTE ToAlpha(const double Opacity);
+
+    void ApplyTopMost(const bool EnableTopMost);
 
     Size GetOuterSize() const;
     void SetOuterSize(const Size NewSize);
@@ -141,6 +144,7 @@ private:
     bool OverlayEnabled = false;
     bool OverlayVisible = false;
     bool TopMost = false;
+    bool LockedInPlace = false;
     bool HighlightEnabled = false;
     bool HighlightRequested = false;
     int HighlightWidth = 0;

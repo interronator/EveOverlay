@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "Application/Logger.h"
+
 ThumbnailView::ThumbnailView(const IWindowManager& WindowManagerReference)
     : WindowManagerInstance(WindowManagerReference)
 {
@@ -187,15 +189,46 @@ void ThumbnailView::SetFrames(const bool Enable)
 
 void ThumbnailView::SetTopMost(const bool EnableTopMost)
 {
-    if (TopMost == EnableTopMost)
+    // Windows can drop the topmost flag behind our back, which hides the picture under the game while the owned label stays visible
+    const bool ActuallyTopMost = m_hWnd != nullptr && (GetExStyle() & WS_EX_TOPMOST) != 0;
+    if (TopMost == EnableTopMost && ActuallyTopMost == EnableTopMost)
     {
         return;
     }
 
     Overlay.SetTopMost(EnableTopMost);
-    SetWindowPos(EnableTopMost == true ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    ApplyTopMost(EnableTopMost);
+
+    const bool Applied = ((GetExStyle() & WS_EX_TOPMOST) != 0) == EnableTopMost;
+    if (Applied == false)
+    {
+        // Windows ignores z-order changes from a background process while a fullscreen game owns the foreground, so borrow the foreground thread's input state
+        const HWND Foreground = ::GetForegroundWindow();
+        const DWORD ForegroundThread = Foreground != nullptr ? ::GetWindowThreadProcessId(Foreground, nullptr) : 0;
+        const DWORD OwnThread = ::GetCurrentThreadId();
+        const bool Attached = ForegroundThread != 0 && ForegroundThread != OwnThread && ::AttachThreadInput(OwnThread, ForegroundThread, TRUE) != FALSE;
+        ApplyTopMost(EnableTopMost);
+        if (Attached == true)
+        {
+            ::AttachThreadInput(OwnThread, ForegroundThread, FALSE);
+        }
+
+        if (((GetExStyle() & WS_EX_TOPMOST) != 0) != EnableTopMost)
+        {
+            Logger::Warning("Thumbnail could not be made topmost even with attached input");
+        }
+    }
 
     TopMost = EnableTopMost;
+}
+
+void ThumbnailView::ApplyTopMost(const bool EnableTopMost)
+{
+    const BOOL Result = SetWindowPos(EnableTopMost == true ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    if (Result == FALSE)
+    {
+        Logger::Warning("SetWindowPos for topmost failed, error " + std::to_string(::GetLastError()));
+    }
 }
 
 void ThumbnailView::SetHighlight(const bool Enabled, const Color NewColor, const int Width)
@@ -564,8 +597,18 @@ LRESULT ThumbnailView::OnLeftButtonDown(UINT, WPARAM, LPARAM, BOOL&)
     return 0;
 }
 
+void ThumbnailView::SetLocked(const bool Locked)
+{
+    LockedInPlace = Locked;
+}
+
 LRESULT ThumbnailView::OnRightButtonDown(UINT, WPARAM, LPARAM, BOOL&)
 {
+    if (LockedInPlace == true)
+    {
+        return 0;
+    }
+
     EnterCustomMouseMode();
     return 0;
 }

@@ -13,6 +13,7 @@ public:
 
     static void Error(const std::string& Message);
     static void Warning(const std::string& Message);
+    static void Info(const std::string& Message);
 
     // Defaults to the logs folder next to the exe
     static void SetDirectory(const std::filesystem::path& NewDirectory);

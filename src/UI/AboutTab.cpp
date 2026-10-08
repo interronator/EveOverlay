@@ -1,5 +1,8 @@
 #include "UI/AboutTab.h"
 
+#include <Windows.h>
+#include <shellapi.h>
+
 #include "Config/TextUtil.h"
 #include "UI/AppInfo.h"
 #include "UI/Theme.h"
@@ -38,6 +41,42 @@ void AboutTab::Draw()
 
     ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
     ImGui::TextWrapped("Live previews and a fast task switcher for your EVE Online clients.");
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(10.0f)));
+
+    Widgets::SectionLabel("UPDATES");
+    const UpdateChecker::State UpdateState = Updates.GetState();
+    ImGui::BeginDisabled(UpdateState == UpdateChecker::State::Checking);
+    if (ImGui::Button("Check for updates") == true)
+    {
+        Updates.Check(Version);
+    }
+
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (UpdateState == UpdateChecker::State::Checking)
+    {
+        ImGui::TextUnformatted("Checking...");
+    }
+    else if (UpdateState == UpdateChecker::State::UpToDate)
+    {
+        ImGui::TextUnformatted("You have the newest version.");
+    }
+    else if (UpdateState == UpdateChecker::State::Failed)
+    {
+        ImGui::TextUnformatted("Could not reach GitHub.");
+    }
+    else if (UpdateState == UpdateChecker::State::Available)
+    {
+        const std::string Message = "Version " + Updates.GetLatestVersion() + " is available.";
+        ImGui::TextUnformatted(Message.c_str());
+        if (Widgets::IsLinkClicked("Open the download page") == true)
+        {
+            const std::wstring Url = TextUtil::FromUtf8(Updates.GetReleaseUrl());
+            ::ShellExecuteW(nullptr, L"open", Url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        }
+    }
+
+    ImGui::TextDisabled("Only asks GitHub when you press the button.");
     ImGui::Dummy(ImVec2(0.0f, Theme::Px(10.0f)));
 
     Widgets::SectionLabel("INSPIRED BY EVE-O PREVIEW");

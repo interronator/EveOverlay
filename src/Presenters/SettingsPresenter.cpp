@@ -1,13 +1,14 @@
 #include "Presenters/SettingsPresenter.h"
 
 SettingsPresenter::SettingsPresenter(ThumbnailConfiguration& ConfigurationReference, ConfigurationStorage& StorageReference,
-    const std::vector<ITabPage*>& TabPages, ThumbnailTab& ThumbnailTabReference, ClientsTab& ClientsTabReference, OrganizerTab& OrganizerTabReference)
+    const std::vector<ITabPage*>& TabPages, ThumbnailTab& ThumbnailTabReference, ClientsTab& ClientsTabReference, OrganizerTab& OrganizerTabReference, HotkeysTab& HotkeysTabReference)
     : Configuration(ConfigurationReference)
     , Storage(StorageReference)
     , Pages(TabPages)
     , ThumbnailPage(ThumbnailTabReference)
     , ClientsPage(ClientsTabReference)
     , OrganizerPage(OrganizerTabReference)
+    , HotkeysPage(HotkeysTabReference)
 {
     for (ITabPage* const Page : Pages)
     {
@@ -25,6 +26,12 @@ SettingsPresenter::SettingsPresenter(ThumbnailConfiguration& ConfigurationRefere
     ClientsPage.ThumbnailStateChanged.Connect([this](const std::wstring& Title, const bool IsDisabled)
     {
         OnThumbnailStateChanged(Title, IsDisabled);
+    });
+
+    OrganizerPage.MoveAllChanged.Connect([this](const bool Enabled)
+    {
+        ThumbnailPage.SetMoveAll(Enabled);
+        SaveSettings();
     });
 
     OrganizerPage.ArrangeRequested.Connect([this](const ThumbnailArrangement& Arrangement)
@@ -46,6 +53,7 @@ void SettingsPresenter::AddThumbnails(const std::vector<std::wstring>& Titles)
     for (const std::wstring& Title : Titles)
     {
         ClientsPage.AddThumbnail(Title, Configuration.IsThumbnailDisabled(Title));
+        HotkeysPage.AddClient(Title);
     }
 
     OpenClients.insert(Titles.begin(), Titles.end());
@@ -58,6 +66,7 @@ void SettingsPresenter::RemoveThumbnails(const std::vector<std::wstring>& Titles
     for (const std::wstring& Title : Titles)
     {
         ClientsPage.RemoveThumbnail(Title);
+        HotkeysPage.RemoveClient(Title);
     }
 
     for (const std::wstring& Title : Titles)
@@ -78,17 +87,24 @@ void SettingsPresenter::UpdateThumbnailSize(const Size NewSize)
 void SettingsPresenter::SaveSettings()
 {
     const bool PreviousFrames = Configuration.ShowThumbnailFrames;
+    const std::string PreviousHotkeys = Configuration.GetHotkeySignature();
 
     for (const ITabPage* const Page : Pages)
     {
         Page->StoreToConfiguration(Configuration);
     }
 
+    OrganizerPage.SetMoveAll(Configuration.MoveAllThumbnails);
     Storage.Save();
 
     if (PreviousFrames != Configuration.ShowThumbnailFrames)
     {
         FrameSettingsChanged.Emit();
+    }
+
+    if (PreviousHotkeys != Configuration.GetHotkeySignature())
+    {
+        HotkeysChanged.Emit();
     }
 }
 

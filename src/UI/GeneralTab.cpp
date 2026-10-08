@@ -23,6 +23,9 @@ void GeneralTab::Draw()
     Widgets::RowDivider();
     Changed = Widgets::ToggleRow("Light theme", LightTheme) == true || Changed == true;
     Widgets::RowDivider();
+    Changed = Widgets::ToggleRow("Enable Tabs in Development", ShowDevelopingTabs) == true || Changed == true;
+    Widgets::HoverTip("Shows the newer tabs that are still being worked on: Timers and Attack Alerts.");
+    Widgets::RowDivider();
     Changed = Widgets::ToggleRow("Track client locations", TrackClientLocations) == true || Changed == true;
     Widgets::RowDivider();
     Changed = Widgets::ToggleRow("Unique layout for each EVE client", UniqueLayout) == true || Changed == true;
@@ -50,6 +53,7 @@ void GeneralTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurati
     MinimizeToTray = Configuration.MinimizeToTray;
     WindowOnTop = Configuration.MainWindowAlwaysOnTop;
     LightTheme = Configuration.LightTheme;
+    ShowDevelopingTabs = Configuration.ShowDevelopingTabs;
     TrackClientLocations = Configuration.IsClientLayoutTrackingEnabled();
     HideActiveClient = Configuration.HideActiveClientThumbnail;
     MinimizeInactive = Configuration.MinimizeInactiveClients;
@@ -63,6 +67,7 @@ void GeneralTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) con
     Configuration.MinimizeToTray = MinimizeToTray;
     Configuration.MainWindowAlwaysOnTop = WindowOnTop;
     Configuration.LightTheme = LightTheme;
+    Configuration.ShowDevelopingTabs = ShowDevelopingTabs;
     Configuration.SetClientLayoutTrackingEnabled(TrackClientLocations);
     Configuration.HideActiveClientThumbnail = HideActiveClient;
     Configuration.MinimizeInactiveClients = MinimizeInactive;

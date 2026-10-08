@@ -110,6 +110,45 @@ void ThumbnailConfiguration::SetClientHotkey(const std::wstring& CurrentClient, 
     ClientHotkeys[CurrentClient] = Value.ToString();
 }
 
+std::vector<std::wstring> ThumbnailConfiguration::GetClientHotkeyTitles() const
+{
+    std::vector<std::wstring> Titles;
+    for (const std::pair<const std::wstring, std::string>& Entry : ClientHotkeys)
+    {
+        Titles.push_back(Entry.first);
+    }
+
+    return Titles;
+}
+
+std::string ThumbnailConfiguration::GetHotkeySignature() const
+{
+    std::string Signature = TogglePreviewsHotkey + "|" + MinimizeAllHotkey;
+    for (const std::pair<const std::wstring, std::string>& Entry : ClientHotkeys)
+    {
+        Signature += "|" + std::to_string(Entry.first.size()) + ":" + Entry.second;
+        for (const wchar_t Character : Entry.first)
+        {
+            Signature += std::to_string(static_cast<unsigned>(Character)) + ",";
+        }
+    }
+
+    for (const CycleGroup& Group : CycleGroups)
+    {
+        Signature += "|G" + Group.Next.ToString() + "/" + Group.Previous.ToString();
+        for (const std::wstring& Member : Group.Members)
+        {
+            Signature += "," + std::to_string(Member.size());
+            for (const wchar_t Character : Member)
+            {
+                Signature += std::to_string(static_cast<unsigned>(Character)) + ".";
+            }
+        }
+    }
+
+    return Signature;
+}
+
 bool ThumbnailConfiguration::IsPriorityClient(const std::wstring& CurrentClient) const
 {
     for (const std::wstring& Client : PriorityClients)
@@ -168,6 +207,11 @@ void ThumbnailConfiguration::ApplyRestrictions()
         Preset.Arrangement.Gap = Restrict(Preset.Arrangement.Gap, 0, 200);
     }
     UniverseAlertTimeout = Restrict(UniverseAlertTimeout, 10, 1800);
+    AttackAlertVolume = Restrict(AttackAlertVolume, 0, 100);
+    AttackAlertSeconds = Restrict(AttackAlertSeconds, 3, 120);
+    QuickTimerSeconds = Restrict(QuickTimerSeconds, 5, 86400);
+    DScanShowSeconds = Restrict(DScanShowSeconds, 5, 120);
+    TimerVolume = Restrict(TimerVolume, 0, 100);
 }
 
 int ThumbnailConfiguration::Restrict(const int Value, const int Minimum, const int Maximum)

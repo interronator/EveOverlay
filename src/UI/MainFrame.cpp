@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 
 #include <dwmapi.h>
 #include <shellapi.h>
@@ -16,9 +17,11 @@
 MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, ConfigurationStorage& StorageReference)
     : Configuration(ConfigurationReference)
     , TaskbarCreatedMessage(::RegisterWindowMessageW(L"TaskbarCreated"))
-    , Pages{&General, &Thumbnail, &Organizer, &Zoom, &Overlay, &Clients, &Universe, &AccountSyncer, &About}
-    , UniverseMap(AppPaths::GetUniverseDataPath(), AppPaths::GetUniverseMapSettingsPath())
-    , Presenter(ConfigurationReference, StorageReference, Pages, Thumbnail, Clients, Organizer)
+    , Pages{&General, &Thumbnail, &Organizer, &Zoom, &Overlay, &Clients, &Hotkeys, &Universe, &Alerts, &TimerSettings, &DScanSettings, &AccountSyncer, &About}
+    , UniverseMap(AppPaths::GetUniverseDataPath(), AppPaths::GetUniverseMapSettingsPath(), AppPaths::GetJumpBridgesPath())
+    , TimerPanel(AppPaths::GetUniverseMapSettingsPath())
+    , DScanPanel(AppPaths::GetShipDataPath(), AppPaths::GetUniverseMapSettingsPath())
+    , Presenter(ConfigurationReference, StorageReference, Pages, Thumbnail, Clients, Organizer, Hotkeys)
     , AppNameUtf8(TextUtil::ToUtf8(AppInfo::NAME))
 {
     // The presenter stores the tab into the configuration first because it connected to SettingsChanged before this handler
@@ -26,6 +29,57 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
     {
         ApplyUniverseSettings();
         UpdateUniverseMapVisibility();
+    });
+
+    TimerSettings.SetTimers(&TimerPanel.GetTimers());
+    TimerSettings.SettingsChanged.Connect([this]()
+    {
+        ApplyTimerSettings();
+    });
+
+    TimerSettings.StartRequested.Connect([this](const std::string& Label, const int Seconds)
+    {
+        TimerPanel.StartTimer(Label, Seconds);
+    });
+
+    TimerSettings.CancelRequested.Connect([this](const int Id)
+    {
+        TimerPanel.CancelTimer(Id);
+    });
+
+    TimerSettings.ScanMarkRequested.Connect([this]()
+    {
+        TimerPanel.MarkScan();
+    });
+
+    TimerSettings.ScanClearRequested.Connect([this]()
+    {
+        TimerPanel.ClearScan();
+    });
+
+    TimerSettings.TestSoundRequested.Connect([this]()
+    {
+        TimerPanel.PlaySound();
+    });
+
+    DScanSettings.SettingsChanged.Connect([this]()
+    {
+        ApplyDScanSettings();
+    });
+
+    DScanSettings.ReadNowRequested.Connect([this]()
+    {
+        DScanSettings.SetStatus(DScanPanel.ReadClipboardNow() == true ? std::string() : (DScanPanel.IsCatalogLoaded() == true ? "The clipboard does not hold a directional scan." : "The ship list (universeData\\types.tsv) could not be loaded."));
+        DScanSettings.SetResult(DScanPanel.HasResult() == true ? &DScanPanel.GetLastResult() : nullptr);
+    });
+
+    DScanPanel.ScanRead.Connect([this]()
+    {
+        DScanSettings.SetResult(&DScanPanel.GetLastResult());
+        if (Configuration.DScanMarksScanAge == true)
+        {
+            TimerPanel.MarkScan();
+        }
     });
 
     General.SettingsChanged.Connect([this]()
@@ -38,6 +92,8 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
     {
         ClientsOpen = IsOpen;
         Universe.SetClientsOpen(IsOpen);
+        TimerPanel.SetClientsOpen(IsOpen);
+        DScanPanel.SetClientsOpen(IsOpen);
         UpdateUniverseMapVisibility();
     });
 
@@ -46,9 +102,43 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
         Universe.AddSavedChannel(Channel);
     });
 
+    UniverseMap.HomeSystemFollowed.Connect([this](const std::string& SystemName)
+    {
+        Universe.SetSystem(SystemName);
+    });
+
+    Alerts.TestSoundRequested.Connect([this]()
+    {
+        AlertTestSound.Play(TextUtil::FromUtf8(Configuration.AttackAlertSoundPath), Configuration.AttackAlertVolume);
+    });
+
     Universe.TestSoundRequested.Connect([this]()
     {
         UniverseMap.PlayAlert();
+    });
+
+    Universe.TestKeywordSoundRequested.Connect([this]()
+    {
+        UniverseMap.PlayKeywordAlert();
+    });
+
+    Universe.OpenJumpBridgesRequested.Connect([this]()
+    {
+        const std::filesystem::path Path = AppPaths::GetJumpBridgesPath();
+        std::error_code Error;
+        if (std::filesystem::exists(Path, Error) == false)
+        {
+            std::ofstream Stream(Path, std::ios::binary);
+            Stream << "# One jump bridge per line, for example:  Jita » Perimeter  or  Jita <-> Perimeter\r\n"
+                   << "# Lines starting with # are ignored. Save the file, then change any setting for the map to pick it up.\r\n";
+        }
+
+        ::ShellExecuteW(m_hWnd, L"open", Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    });
+
+    Universe.HistoryClearRequested.Connect([this]()
+    {
+        UniverseMap.ClearHistory();
     });
 
     Universe.SizePreviewed.Connect([this](const int MapSize)
@@ -131,9 +221,45 @@ void MainFrame::ApplyUniverseSettings()
     Options.SoundVolume = Configuration.UniverseAlertVolume;
     Options.AlertSeconds = Configuration.UniverseAlertTimeout;
     Options.SoundPath = Configuration.UniverseAlertSoundPath;
+    Options.IgnoreClear = Configuration.UniverseIgnoreClear;
+    Options.ScaleVolumeByDistance = Configuration.UniverseScaleVolumeByDistance;
+    Options.FollowLocation = Configuration.UniverseFollowLocation;
+    Options.UseJumpBridges = Configuration.UniverseUseJumpBridges;
+    Options.Keywords = Configuration.UniverseKeywords;
+    Options.KeywordSoundPath = Configuration.UniverseKeywordSoundPath;
     UniverseMap.Configure(Options);
     Universe.SetStatus(UniverseMap.GetStatus());
     Universe.SetSystemListing(&UniverseMap.GetSystemListing());
+    Universe.SetHistory(&UniverseMap.GetHistory());
+}
+
+void MainFrame::ApplyTimerSettings()
+{
+    TimerOverlayOptions Options;
+    Options.ShowWindow = Configuration.TimerWindowEnabled;
+    Options.ShowScanAge = Configuration.TimerShowScanAge;
+    Options.SoundEnabled = Configuration.TimerSoundEnabled;
+    Options.SoundVolume = Configuration.TimerVolume;
+    Options.SoundPath = Configuration.TimerSoundPath;
+    TimerPanel.Configure(Options);
+
+    TimerHotkeys.Clear();
+    TimerHotkeys.Add(Hotkey::Parse(Configuration.ScanHotkey), [this]()
+    {
+        TimerPanel.MarkScan();
+    });
+    TimerHotkeys.Add(Hotkey::Parse(Configuration.QuickTimerHotkey), [this]()
+    {
+        TimerPanel.StartTimer("Quick timer", Configuration.QuickTimerSeconds);
+    });
+}
+
+void MainFrame::ApplyDScanSettings()
+{
+    DScanOverlayOptions Options;
+    Options.AutoRead = Configuration.DScanAutoRead;
+    Options.ShowSeconds = Configuration.DScanShowSeconds;
+    DScanPanel.Configure(Options);
 }
 
 void MainFrame::UpdateUniverseMapVisibility()
@@ -198,6 +324,8 @@ LRESULT MainFrame::OnCreate(UINT, WPARAM, LPARAM, BOOL&)
     Presenter.LoadSettings();
     ApplyWindowOnTop();
     ApplyUniverseSettings();
+    ApplyTimerSettings();
+    ApplyDScanSettings();
     ::DragAcceptFiles(m_hWnd, TRUE);
 
     UpdateUniverseMapVisibility();
@@ -270,6 +398,11 @@ LRESULT MainFrame::OnTimer(UINT, WPARAM TimerId, LPARAM, BOOL& Handled)
     if (Renderer.IsReady() == false || IsWindowVisible() == FALSE || IsIconic() == TRUE)
     {
         return 0;
+    }
+
+    if (HotkeyField::IsCapturing() == true)
+    {
+        FramesRemaining = std::max(FramesRemaining, 1);
     }
 
     if (FramesRemaining > 0)
@@ -461,7 +594,7 @@ void MainFrame::DrawSidebar()
 {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, Theme::SURFACE);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(Theme::Px(14.0f), Theme::Px(18.0f)));
-    ImGui::BeginChild("##Sidebar", ImVec2(Theme::Px(SIDEBAR_WIDTH), 0.0f), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::BeginChild("##Sidebar", ImVec2(Theme::Px(SIDEBAR_WIDTH), 0.0f), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
 
     ImGui::PushFont(Theme::GetBoldFont(), 18.0f);
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::ACCENT);
@@ -474,8 +607,18 @@ void MainFrame::DrawSidebar()
     ImGui::PopStyleColor();
     ImGui::Dummy(ImVec2(0.0f, Theme::Px(14.0f)));
 
+    if (IsPageVisible(SelectedPage) == false)
+    {
+        SelectedPage = 0;
+    }
+
     for (size_t Index = 0; Index < Pages.size(); Index++)
     {
+        if (IsPageVisible(Index) == false)
+        {
+            continue;
+        }
+
         DrawTabRow(Index);
     }
 
@@ -486,6 +629,13 @@ void MainFrame::DrawSidebar()
     ImGui::EndChild();
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
+}
+
+bool MainFrame::IsPageVisible(const size_t Index) const
+{
+    const ITabPage* const Page = Pages[Index];
+    const bool IsDeveloping = Page == &Alerts || Page == &TimerSettings;
+    return IsDeveloping == false || Configuration.ShowDevelopingTabs == true;
 }
 
 void MainFrame::DrawTabRow(const size_t Index)

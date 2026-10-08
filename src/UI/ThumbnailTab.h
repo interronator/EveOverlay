@@ -18,6 +18,7 @@ public:
     void StoreToConfiguration(ThumbnailConfiguration& Configuration) const override;
 
     void SetThumbnailSize(const Size NewSize);
+    void SetMoveAll(const bool Enabled);
 
 private:
     static constexpr int MINIMUM_OPACITY = 20;
@@ -28,6 +29,7 @@ private:
 
     int OpacityPercent = MAXIMUM_OPACITY;
     bool MoveAll = false;
+    bool LockPreviews = false;
     bool SnapEnabled = true;
     int ThumbnailWidth = 0;
     int ThumbnailHeight = 0;

@@ -1,12 +1,15 @@
 #pragma once
 
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 #include "Application/Signal.h"
 #include "UI/ITabPage.h"
+#include "UI/SoundPicker.h"
 #include "UI/Widgets.h"
+#include "Universe/IntelHistory.h"
 #include "Universe/SystemListing.h"
 
 // Every setting of the universe map lives here; the map window itself only draws
@@ -16,12 +19,21 @@ public:
     Signal<int> SizePreviewed;
     Signal<int> RotationPreviewed;
     Signal<> TestSoundRequested;
+    Signal<> TestKeywordSoundRequested;
+    Signal<> HistoryClearRequested;
+    Signal<> OpenJumpBridgesRequested;
 
     const std::string& GetTitle() const override;
     const std::string& GetDescription() const override;
 
     void SetStatus(const std::string& NewStatus);
     void SetClientsOpen(const bool IsOpen);
+
+    // The list must outlive the tab; it is read every frame
+    void SetHistory(const std::vector<IntelHistoryEntry>* const NewHistory);
+
+    // Used when the map follows the pilot to another system; the change is saved like any other
+    void SetSystem(const std::string& Name);
 
     // The listing must outlive the tab; it is re-read only when its size changes
     void SetSystemListing(const SystemListing* const NewListing);
@@ -46,6 +58,8 @@ private:
     static constexpr int MAXIMUM_TIMEOUT = 1800;
     static constexpr float LIST_HEIGHT = 240.0f;
     static constexpr float POPUP_MAX_HEIGHT = 340.0f;
+    static constexpr float HISTORY_HEIGHT = 180.0f;
+    static constexpr std::chrono::hours FOUND_CHANNEL_AGE{24 * 30};
 
 
     // Truncates instead of aborting when the text is longer than the buffer, which a hand-edited config could cause
@@ -54,16 +68,8 @@ private:
     // Names starting with the typed text come first, then names merely containing it
     void RebuildFilter();
 
-    // "Default Warning" from defaultWarning.wav
-    static std::string SoundDisplayName(const std::filesystem::path& Sound);
-
-    std::string GetSoundLabel() const;
-    bool IsSoundSelected(const std::filesystem::path& Bundled) const;
-
-    // Choose or test the alert sound; returns true when the chosen sound changed
-    bool DrawSoundRow();
-
-    bool BrowseForSound();
+    // Newest reports first, with the keyword matches in the alert colour
+    void DrawHistory();
 
     // Narrows the system dropdown to one region; it is a view filter only and is not saved
     void DrawRegionRow();
@@ -76,6 +82,12 @@ private:
     // A dropdown of channels that have worked before, each with a delete button, plus a box to type a new channel name
     bool DrawChannelRow();
 
+    // Whether Name is one of the comma separated channels in the channel box
+    bool IsChannelWatched(const std::string& Name) const;
+
+    // Adds the channel to the box, or takes it out again if it is already there
+    void ToggleChannel(const std::string& Name);
+
     const std::string Title = "Intel Watcher";
     const std::string Description = "Choose a system and how far around it to show, with live intel alerts.";
 
@@ -83,6 +95,7 @@ private:
     char IntelChannel[64] = "Intel";
     char NewChannel[64] = {};
     std::vector<std::string> SavedChannels;
+    std::vector<std::string> FoundChannels;
     char Filter[64] = {};
     std::string AppliedFilter;
     bool FilterApplied = false;
@@ -106,6 +119,13 @@ private:
     int SoundVolume = 70;
     int AlertTimeout = 300;
     std::string SoundPath;
-    std::vector<std::filesystem::path> BundledSounds;
+    bool IgnoreClear = true;
+    bool ScaleVolume = true;
+    bool FollowLocation = false;
+    bool UseJumpBridges = true;
+    char Keywords[256] = {};
+    std::string KeywordSoundPath;
+    const std::vector<IntelHistoryEntry>* History = nullptr;
+    SoundPicker AlertSoundPicker;
     std::string Status;
 };

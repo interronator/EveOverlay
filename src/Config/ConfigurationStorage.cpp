@@ -13,6 +13,7 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"MainWindowMaximized", &ThumbnailConfiguration::MainWindowMaximized},
     {"MainWindowAlwaysOnTop", &ThumbnailConfiguration::MainWindowAlwaysOnTop},
     {"LightTheme", &ThumbnailConfiguration::LightTheme},
+    {"ShowDevelopingTabs", &ThumbnailConfiguration::ShowDevelopingTabs},
     {"CompatibilityMode", &ThumbnailConfiguration::EnableCompatibilityMode},
     {"HideActiveClientThumbnail", &ThumbnailConfiguration::HideActiveClientThumbnail},
     {"MinimizeInactiveClients", &ThumbnailConfiguration::MinimizeInactiveClients},
@@ -20,6 +21,7 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"HideThumbnailsOnLostFocus", &ThumbnailConfiguration::HideThumbnailsOnLostFocus},
     {"EnableThumbnailSnap", &ThumbnailConfiguration::EnableThumbnailSnap},
     {"MoveAllThumbnails", &ThumbnailConfiguration::MoveAllThumbnails},
+    {"LockThumbnails", &ThumbnailConfiguration::LockThumbnails},
     {"ThumbnailOrganizerEnabled", &ThumbnailConfiguration::OrganizerEnabled},
     {"EnableThumbnailZoom", &ThumbnailConfiguration::ThumbnailZoomEnabled},
     {"ShowThumbnailOverlays", &ThumbnailConfiguration::ShowThumbnailOverlays},
@@ -29,6 +31,34 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"UniverseMapVisible", &ThumbnailConfiguration::UniverseMapVisible},
     {"UniverseSmartMap", &ThumbnailConfiguration::UniverseSmartMap},
     {"UniverseAlertSoundEnabled", &ThumbnailConfiguration::UniverseAlertSoundEnabled},
+    {"UniverseIgnoreClear", &ThumbnailConfiguration::UniverseIgnoreClear},
+    {"UniverseScaleVolumeByDistance", &ThumbnailConfiguration::UniverseScaleVolumeByDistance},
+    {"UniverseFollowLocation", &ThumbnailConfiguration::UniverseFollowLocation},
+    {"UniverseUseJumpBridges", &ThumbnailConfiguration::UniverseUseJumpBridges},
+    {"AttackAlertsEnabled", &ThumbnailConfiguration::AttackAlertsEnabled},
+    {"AttackAlertOnDamage", &ThumbnailConfiguration::AttackAlertOnDamage},
+    {"AttackAlertOnWarpDisruption", &ThumbnailConfiguration::AttackAlertOnWarpDisruption},
+    {"AttackAlertSoundEnabled", &ThumbnailConfiguration::AttackAlertSoundEnabled},
+    {"DScanAutoRead", &ThumbnailConfiguration::DScanAutoRead},
+    {"DScanMarksScanAge", &ThumbnailConfiguration::DScanMarksScanAge},
+    {"TimerWindowEnabled", &ThumbnailConfiguration::TimerWindowEnabled},
+    {"TimerShowScanAge", &ThumbnailConfiguration::TimerShowScanAge},
+    {"TimerSoundEnabled", &ThumbnailConfiguration::TimerSoundEnabled},
+};
+
+const ConfigurationStorage::StringProperty ConfigurationStorage::STRING_PROPERTIES[] = {
+    {"UniverseSystem", &ThumbnailConfiguration::UniverseSystem},
+    {"UniverseIntelChannel", &ThumbnailConfiguration::UniverseIntelChannel},
+    {"UniverseAlertSoundPath", &ThumbnailConfiguration::UniverseAlertSoundPath},
+    {"UniverseKeywords", &ThumbnailConfiguration::UniverseKeywords},
+    {"UniverseKeywordSoundPath", &ThumbnailConfiguration::UniverseKeywordSoundPath},
+    {"AttackAlertSoundPath", &ThumbnailConfiguration::AttackAlertSoundPath},
+    {"TogglePreviewsHotkey", &ThumbnailConfiguration::TogglePreviewsHotkey},
+    {"MinimizeAllHotkey", &ThumbnailConfiguration::MinimizeAllHotkey},
+    {"ScanHotkey", &ThumbnailConfiguration::ScanHotkey},
+    {"QuickTimerHotkey", &ThumbnailConfiguration::QuickTimerHotkey},
+    {"TimerSoundPath", &ThumbnailConfiguration::TimerSoundPath},
+    {"SyncerUserFilePath", &ThumbnailConfiguration::SyncerUserFilePath},
 };
 
 const ConfigurationStorage::IntProperty ConfigurationStorage::INT_PROPERTIES[] = {
@@ -43,6 +73,11 @@ const ConfigurationStorage::IntProperty ConfigurationStorage::INT_PROPERTIES[] =
     {"UniverseMapRotation", &ThumbnailConfiguration::UniverseMapRotation},
     {"UniverseAlertVolume", &ThumbnailConfiguration::UniverseAlertVolume},
     {"UniverseAlertTimeout", &ThumbnailConfiguration::UniverseAlertTimeout},
+    {"AttackAlertVolume", &ThumbnailConfiguration::AttackAlertVolume},
+    {"AttackAlertSeconds", &ThumbnailConfiguration::AttackAlertSeconds},
+    {"DScanShowSeconds", &ThumbnailConfiguration::DScanShowSeconds},
+    {"QuickTimerSeconds", &ThumbnailConfiguration::QuickTimerSeconds},
+    {"TimerVolume", &ThumbnailConfiguration::TimerVolume},
 };
 
 const ConfigurationStorage::SizeProperty ConfigurationStorage::SIZE_PROPERTIES[] = {
@@ -140,6 +175,7 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["MainWindowMaximized"] = Configuration.MainWindowMaximized;
     Root["MainWindowAlwaysOnTop"] = Configuration.MainWindowAlwaysOnTop;
     Root["LightTheme"] = Configuration.LightTheme;
+    Root["ShowDevelopingTabs"] = Configuration.ShowDevelopingTabs;
     Root["ThumbnailRefreshPeriod"] = Configuration.ThumbnailRefreshPeriod;
     Root["CompatibilityMode"] = Configuration.EnableCompatibilityMode;
     Root["ThumbnailsOpacity"] = Configuration.ThumbnailOpacity;
@@ -155,6 +191,7 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["ThumbnailMinimumSize"] = Configuration.ThumbnailMinimumSize.ToString();
     Root["EnableThumbnailSnap"] = Configuration.EnableThumbnailSnap;
     Root["MoveAllThumbnails"] = Configuration.MoveAllThumbnails;
+    Root["LockThumbnails"] = Configuration.LockThumbnails;
     Root["ThumbnailOrganizerEnabled"] = Configuration.OrganizerEnabled;
     Root["EnableThumbnailZoom"] = Configuration.ThumbnailZoomEnabled;
     Root["ThumbnailZoomFactor"] = Configuration.ThumbnailZoomFactor;
@@ -164,9 +201,12 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["EnableActiveClientHighlight"] = Configuration.EnableActiveClientHighlight;
     Root["ActiveClientHighlightColor"] = Configuration.ActiveClientHighlightColor.ToString();
     Root["ActiveClientHighlightThickness"] = Configuration.ActiveClientHighlightThickness;
-    Root["UniverseSystem"] = Configuration.UniverseSystem;
+    for (const StringProperty& Property : STRING_PROPERTIES)
+    {
+        Root[Property.Key] = Configuration.*Property.Member;
+    }
+
     Root["UniverseJumps"] = Configuration.UniverseJumps;
-    Root["UniverseIntelChannel"] = Configuration.UniverseIntelChannel;
     Root["UniverseMapAlwaysOnTop"] = Configuration.UniverseMapAlwaysOnTop;
     Root["UniverseMapSize"] = Configuration.UniverseMapSize;
     Root["UniverseMapRotation"] = Configuration.UniverseMapRotation;
@@ -175,8 +215,24 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["UniverseAlertSoundEnabled"] = Configuration.UniverseAlertSoundEnabled;
     Root["UniverseAlertVolume"] = Configuration.UniverseAlertVolume;
     Root["UniverseAlertTimeout"] = Configuration.UniverseAlertTimeout;
-    Root["UniverseAlertSoundPath"] = Configuration.UniverseAlertSoundPath;
-    Root["SyncerUserFilePath"] = Configuration.SyncerUserFilePath;
+    Root["UniverseIgnoreClear"] = Configuration.UniverseIgnoreClear;
+    Root["UniverseScaleVolumeByDistance"] = Configuration.UniverseScaleVolumeByDistance;
+    Root["UniverseFollowLocation"] = Configuration.UniverseFollowLocation;
+    Root["UniverseUseJumpBridges"] = Configuration.UniverseUseJumpBridges;
+    Root["AttackAlertsEnabled"] = Configuration.AttackAlertsEnabled;
+    Root["AttackAlertOnDamage"] = Configuration.AttackAlertOnDamage;
+    Root["AttackAlertOnWarpDisruption"] = Configuration.AttackAlertOnWarpDisruption;
+    Root["AttackAlertSoundEnabled"] = Configuration.AttackAlertSoundEnabled;
+    Root["AttackAlertVolume"] = Configuration.AttackAlertVolume;
+    Root["AttackAlertSeconds"] = Configuration.AttackAlertSeconds;
+    Root["DScanAutoRead"] = Configuration.DScanAutoRead;
+    Root["DScanShowSeconds"] = Configuration.DScanShowSeconds;
+    Root["DScanMarksScanAge"] = Configuration.DScanMarksScanAge;
+    Root["TimerWindowEnabled"] = Configuration.TimerWindowEnabled;
+    Root["TimerShowScanAge"] = Configuration.TimerShowScanAge;
+    Root["TimerSoundEnabled"] = Configuration.TimerSoundEnabled;
+    Root["QuickTimerSeconds"] = Configuration.QuickTimerSeconds;
+    Root["TimerVolume"] = Configuration.TimerVolume;
 
     Json PerClientLayout = Json::object();
     for (const std::pair<const std::wstring, std::map<std::wstring, Point>>& Client : Configuration.PerClientLayout)
@@ -248,6 +304,25 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     }
 
     Root["UniverseSavedChannels"] = SavedChannels;
+
+    Json CycleGroups = Json::array();
+    for (const CycleGroup& Group : Configuration.CycleGroups)
+    {
+        Json Entry = Json::object();
+        Entry["Name"] = Group.Name;
+        Json Members = Json::array();
+        for (const std::wstring& Member : Group.Members)
+        {
+            Members.push_back(TextUtil::ToUtf8(Member));
+        }
+
+        Entry["Members"] = Members;
+        Entry["Next"] = Group.Next.ToString();
+        Entry["Previous"] = Group.Previous.ToString();
+        CycleGroups.push_back(Entry);
+    }
+
+    Root["CycleGroups"] = CycleGroups;
 
     Json LayoutPresets = Json::array();
     for (const LayoutPreset& Preset : Configuration.LayoutPresets)
@@ -350,41 +425,16 @@ void ConfigurationStorage::ApplyProperty(const std::string& Key, const Json& Val
         return;
     }
 
-    if (Key == "UniverseSystem")
+    for (const StringProperty& Property : STRING_PROPERTIES)
     {
-        if (Value.is_string() == true)
+        if (Key != Property.Key)
         {
-            Configuration.UniverseSystem = Value.get<std::string>();
+            continue;
         }
 
-        return;
-    }
-
-    if (Key == "UniverseAlertSoundPath")
-    {
         if (Value.is_string() == true)
         {
-            Configuration.UniverseAlertSoundPath = Value.get<std::string>();
-        }
-
-        return;
-    }
-
-    if (Key == "SyncerUserFilePath")
-    {
-        if (Value.is_string() == true)
-        {
-            Configuration.SyncerUserFilePath = Value.get<std::string>();
-        }
-
-        return;
-    }
-
-    if (Key == "UniverseIntelChannel")
-    {
-        if (Value.is_string() == true)
-        {
-            Configuration.UniverseIntelChannel = Value.get<std::string>();
+            Configuration.*Property.Member = Value.get<std::string>();
         }
 
         return;
@@ -496,9 +546,54 @@ void ConfigurationStorage::ApplyProperty(const std::string& Key, const Json& Val
         return;
     }
 
+    if (Key == "CycleGroups")
+    {
+        LoadCycleGroups(Value);
+        return;
+    }
+
     if (Key == "LayoutPresets")
     {
         LoadLayoutPresets(Value);
+    }
+}
+
+void ConfigurationStorage::LoadCycleGroups(const Json& Value)
+{
+    Configuration.CycleGroups.clear();
+    if (Value.is_array() == false)
+    {
+        return;
+    }
+
+    for (const Json& Entry : Value)
+    {
+        if (Entry.is_object() == false)
+        {
+            continue;
+        }
+
+        CycleGroup Group;
+        const Json Name = Entry.value("Name", Json());
+        Group.Name = Name.is_string() == true ? Name.get<std::string>() : std::string();
+
+        const Json Members = Entry.value("Members", Json());
+        if (Members.is_array() == true)
+        {
+            for (const Json& Member : Members)
+            {
+                if (Member.is_string() == true)
+                {
+                    Group.Members.push_back(TextUtil::FromUtf8(Member.get<std::string>()));
+                }
+            }
+        }
+
+        const Json Next = Entry.value("Next", Json());
+        const Json Previous = Entry.value("Previous", Json());
+        Group.Next = Next.is_string() == true ? Hotkey::Parse(Next.get<std::string>()) : Hotkey();
+        Group.Previous = Previous.is_string() == true ? Hotkey::Parse(Previous.get<std::string>()) : Hotkey();
+        Configuration.CycleGroups.push_back(std::move(Group));
     }
 }
 

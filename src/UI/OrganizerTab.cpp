@@ -22,6 +22,12 @@ void OrganizerTab::Draw()
         SettingsChanged.Emit();
     }
 
+    Widgets::RowDivider();
+    if (Widgets::ToggleRow("Move all thumbnails together", MoveAll) == true)
+    {
+        MoveAllChanged.Emit(MoveAll);
+    }
+
     Widgets::EndCard();
 
     if (Enabled == false)
@@ -52,6 +58,7 @@ void OrganizerTab::Draw()
 void OrganizerTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration)
 {
     Enabled = Configuration.OrganizerEnabled;
+    MoveAll = Configuration.MoveAllThumbnails;
     Presets = Configuration.LayoutPresets;
 }
 
@@ -59,6 +66,11 @@ void OrganizerTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) c
 {
     Configuration.OrganizerEnabled = Enabled;
     Configuration.LayoutPresets = Presets;
+}
+
+void OrganizerTab::SetMoveAll(const bool NewValue)
+{
+    MoveAll = NewValue;
 }
 
 void OrganizerTab::SetDetectedCount(const int Count)

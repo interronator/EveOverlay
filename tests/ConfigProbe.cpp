@@ -83,6 +83,29 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Full.ToggleThumbnail(L"Beta", true);
     Full.ActiveClientHighlightColor = Color{255, 1, 2, 3};
     Full.LayoutPresets.push_back(LayoutPreset{"Five wide", 5, ThumbnailArrangement{GridShape{5, 1, true}, 8, Point{-20, 30}}});
+    Full.UniverseIgnoreClear = false;
+    Full.UniverseScaleVolumeByDistance = false;
+    Full.UniverseFollowLocation = true;
+    Full.UniverseKeywords = "bubble, camp";
+    Full.UniverseKeywordSoundPath = "alarm.wav";
+    Full.AttackAlertsEnabled = true;
+    Full.AttackAlertOnDamage = false;
+    Full.AttackAlertVolume = 33;
+    Full.AttackAlertSeconds = 25;
+    Full.AttackAlertSoundPath = "C:\\sounds\\horn.wav";
+    Full.TogglePreviewsHotkey = "Control, F9";
+    Full.MinimizeAllHotkey = "Alt, F10";
+    CycleGroup Mining;
+    Mining.Name = "Miners";
+    Mining.Members = {L"EVE - First", L"EVE - Second"};
+    Mining.Next = Hotkey::Parse("F13");
+    Mining.Previous = Hotkey::Parse("Shift, F13");
+    Full.CycleGroups.push_back(Mining);
+    CycleGroup Everyone;
+    Everyone.Name = "All";
+    Everyone.Next = Hotkey::Parse("F14");
+    Full.CycleGroups.push_back(Everyone);
+    const std::string SignatureBefore = Full.GetHotkeySignature();
     ConfigurationStorage FullStorage(Full, Directory / L"full.json");
     FullStorage.Save();
 
@@ -98,6 +121,24 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Check.Expect(Reloaded.ActiveClientHighlightColor == Color{255, 1, 2, 3}, "reload colour");
     Check.Expect(Reloaded.LayoutPresets.size() == 1 && Reloaded.LayoutPresets[0].Name == "Five wide" && Reloaded.LayoutPresets[0].ClientCount == 5, "reload preset identity");
     Check.Expect(Reloaded.LayoutPresets[0].Arrangement.Shape == GridShape{5, 1, true} && Reloaded.LayoutPresets[0].Arrangement.Gap == 8 && Reloaded.LayoutPresets[0].Arrangement.Origin.X == -20 && Reloaded.LayoutPresets[0].Arrangement.Shape.PartialRowFirst == true, "reload preset arrangement");
+
+    Check.Expect(Reloaded.UniverseIgnoreClear == false && Reloaded.UniverseScaleVolumeByDistance == false && Reloaded.UniverseFollowLocation == true, "reload intel switches");
+    Check.Expect(Reloaded.UniverseKeywords == "bubble, camp" && Reloaded.UniverseKeywordSoundPath == "alarm.wav", "reload intel keywords");
+    Check.Expect(Defaults.UniverseIgnoreClear == true && Defaults.UniverseFollowLocation == false && Defaults.AttackAlertsEnabled == false, "intel and attack alert defaults");
+    Check.Expect(Reloaded.AttackAlertsEnabled == true && Reloaded.AttackAlertOnDamage == false && Reloaded.AttackAlertOnWarpDisruption == true, "reload attack alert switches");
+    Check.Expect(Reloaded.AttackAlertVolume == 33 && Reloaded.AttackAlertSeconds == 25 && Reloaded.AttackAlertSoundPath == "C:\\sounds\\horn.wav", "reload attack alert values");
+    Check.Expect(Reloaded.TogglePreviewsHotkey == "Control, F9" && Reloaded.MinimizeAllHotkey == "Alt, F10", "reload global hotkeys");
+    Check.Expect(Reloaded.CycleGroups.size() == 2 && Reloaded.CycleGroups[0].Name == "Miners" && Reloaded.CycleGroups[0].Members.size() == 2 && Reloaded.CycleGroups[0].Members[1] == L"EVE - Second", "reload cycle group members");
+    Check.Expect(Reloaded.CycleGroups[0].Next.VirtualKey == VK_F13 && Reloaded.CycleGroups[0].Previous.Shift == true && Reloaded.CycleGroups[1].Members.empty() == true, "reload cycle group hotkeys");
+    Check.Expect(Reloaded.GetHotkeySignature() == SignatureBefore, "hotkey signature survives a save and load");
+    Reloaded.CycleGroups[0].Next = Hotkey::Parse("F15");
+    Check.Expect(Reloaded.GetHotkeySignature() != SignatureBefore, "hotkey signature notices a changed hotkey");
+
+    ThumbnailConfiguration Limits;
+    Limits.AttackAlertVolume = 500;
+    Limits.AttackAlertSeconds = 0;
+    Limits.ApplyRestrictions();
+    Check.Expect(Limits.AttackAlertVolume == 100 && Limits.AttackAlertSeconds == 3, "attack alert values are limited");
 
     std::printf(Check.FailureCount == 0 ? "ALL PASSED\n" : "%d FAILED\n", Check.FailureCount);
     return Check.FailureCount;

@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "Services/UpdateChecker.h"
 #include "UI/ITabPage.h"
 
 class AboutTab : public ITabPage
@@ -23,4 +24,5 @@ private:
 
     std::string Name;
     std::string Version;
+    UpdateChecker Updates;
 };

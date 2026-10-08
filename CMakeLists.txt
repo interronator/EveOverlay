@@ -29,6 +29,7 @@ add_executable(EveOverlay WIN32
 
 add_custom_command(TARGET EveOverlay POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/universeData/systems.csv" "$<TARGET_FILE_DIR:EveOverlay>/universeData/systems.csv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/universeData/types.tsv" "$<TARGET_FILE_DIR:EveOverlay>/universeData/types.tsv"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets/sounds" "$<TARGET_FILE_DIR:EveOverlay>/sounds")
 
 target_link_options(EveOverlay PRIVATE /MANIFEST:NO)

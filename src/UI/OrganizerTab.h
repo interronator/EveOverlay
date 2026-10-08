@@ -13,6 +13,9 @@ class OrganizerTab : public ITabPage
 public:
     Signal<const ThumbnailArrangement&> ArrangeRequested;
 
+    // The setting belongs to the Thumbnail tab, so this tab only reports a change and is told the current value back
+    Signal<bool> MoveAllChanged;
+
     const std::string& GetTitle() const override;
     const std::string& GetDescription() const override;
     void Draw() override;
@@ -20,6 +23,7 @@ public:
     void StoreToConfiguration(ThumbnailConfiguration& Configuration) const override;
 
     void SetDetectedCount(const int Count);
+    void SetMoveAll(const bool NewValue);
 
 private:
     static constexpr int MINIMUM_CLIENTS = 1;
@@ -45,6 +49,7 @@ private:
     const std::string Description = "Arrange the previews of your open clients into a grid.";
 
     bool Enabled = true;
+    bool MoveAll = false;
     bool AutoDetect = true;
     int DetectedCount = 0;
     int ManualCount = 4;

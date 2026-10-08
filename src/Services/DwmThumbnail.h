@@ -24,4 +24,5 @@ private:
     const IWindowManager& WindowManagerInstance;
     HTHUMBNAIL ThumbnailHandle = nullptr;
     DWM_THUMBNAIL_PROPERTIES Properties = {};
+    SIZE LastSourceSize = {};
 };

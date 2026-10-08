@@ -1,12 +1,19 @@
 #include "Services/AlertSound.h"
 
 #include <algorithm>
+#include <atomic>
 #include <system_error>
 
 #include <mmsystem.h>
 
 #include "Application/AppPaths.h"
 #include "Application/Logger.h"
+
+std::wstring AlertSound::MakeAlias()
+{
+    static std::atomic<int> NextInstance{0};
+    return L"EveOverlayAlert" + std::to_wstring(NextInstance.fetch_add(1));
+}
 
 AlertSound::~AlertSound()
 {
@@ -56,7 +63,7 @@ void AlertSound::Play(const std::wstring& Setting, const int VolumePercent)
         return;
     }
 
-    const std::wstring Open = L"open \"" + Path.wstring() + L"\" type mpegvideo alias " + ALIAS;
+    const std::wstring Open = L"open \"" + Path.wstring() + L"\" type mpegvideo alias " + Alias;
     const MCIERROR OpenResult = ::mciSendStringW(Open.c_str(), nullptr, 0, nullptr);
     if (OpenResult != 0)
     {
@@ -67,9 +74,9 @@ void AlertSound::Play(const std::wstring& Setting, const int VolumePercent)
 
     IsOpen = true;
     const int Volume = std::clamp(VolumePercent, 0, 100) * 10;
-    const std::wstring SetVolume = std::wstring(L"setaudio ") + ALIAS + L" volume to " + std::to_wstring(Volume);
+    const std::wstring SetVolume = std::wstring(L"setaudio ") + Alias + L" volume to " + std::to_wstring(Volume);
     ::mciSendStringW(SetVolume.c_str(), nullptr, 0, nullptr);
-    std::wstring Play = std::wstring(L"play ") + ALIAS + L" from 0";
+    std::wstring Play = std::wstring(L"play ") + Alias + L" from 0";
     if (IsBundled == true)
     {
         Play += L" to " + std::to_wstring(BUNDLED_SOUND_LENGTH_MS);
@@ -85,7 +92,7 @@ void AlertSound::Close()
         return;
     }
 
-    ::mciSendStringW((std::wstring(L"close ") + ALIAS).c_str(), nullptr, 0, nullptr);
+    ::mciSendStringW((std::wstring(L"close ") + Alias).c_str(), nullptr, 0, nullptr);
     IsOpen = false;
 }
 

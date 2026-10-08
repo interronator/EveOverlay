@@ -21,6 +21,7 @@ if (Test-Path (Join-Path $Root "dist"))
 New-Item -ItemType Directory -Force (Join-Path $Stage "universeData"), (Join-Path $Stage "sounds") | Out-Null
 Copy-Item (Join-Path $Bin "EveOverlay.exe") $Stage
 Copy-Item (Join-Path $Root "universeData\systems.csv") (Join-Path $Stage "universeData")
+Copy-Item (Join-Path $Root "universeData\types.tsv") (Join-Path $Stage "universeData")
 Copy-Item (Join-Path $Root "assets\sounds\defaultWarning.wav") (Join-Path $Stage "sounds")
 Copy-Item (Join-Path $Root "LICENSE") $Stage
 

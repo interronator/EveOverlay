@@ -32,6 +32,16 @@ std::filesystem::path AppPaths::GetUniverseDataPath()
     return GetExecutableDirectory() / L"universeData" / L"systems.csv";
 }
 
+std::filesystem::path AppPaths::GetJumpBridgesPath()
+{
+    return GetExecutableDirectory() / L"Jump Bridges.txt";
+}
+
+std::filesystem::path AppPaths::GetShipDataPath()
+{
+    return GetExecutableDirectory() / L"universeData" / L"types.tsv";
+}
+
 std::filesystem::path AppPaths::GetUniverseMapSettingsPath()
 {
     return GetExecutableDirectory() / L"UniverseMap.ini";

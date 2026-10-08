@@ -36,6 +36,7 @@ void DwmThumbnail::Register(const HWND Destination, const HWND Source)
     }
 
     ThumbnailHandle = NewHandle;
+    LastSourceSize = {};
 }
 
 void DwmThumbnail::Unregister()
@@ -61,7 +62,25 @@ void DwmThumbnail::Update()
         return;
     }
 
-    DwmApi::UpdateThumbnailProperties(ThumbnailHandle, Properties);
+    const HRESULT UpdateResult = DwmApi::UpdateThumbnailProperties(ThumbnailHandle, Properties);
+
+    SIZE SourceSize = {};
+    const HRESULT QueryResult = DwmApi::QuerySourceSize(ThumbnailHandle, &SourceSize);
+
+    // A thumbnail that DWM rejects or that has no source picture is dropped so the next refresh registers a fresh one
+    if (FAILED(UpdateResult) == true || FAILED(QueryResult) == true || SourceSize.cx <= 0 || SourceSize.cy <= 0)
+    {
+        Unregister();
+        return;
+    }
+
+    // A client that resized after registering (e.g. finished loading) gets a fresh thumbnail
+    const bool SizeChanged = LastSourceSize.cx != 0 && (LastSourceSize.cx != SourceSize.cx || LastSourceSize.cy != SourceSize.cy);
+    LastSourceSize = SourceSize;
+    if (SizeChanged == true)
+    {
+        Unregister();
+    }
 }
 
 bool DwmThumbnail::IsRegistered() const

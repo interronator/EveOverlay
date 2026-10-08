@@ -7,6 +7,7 @@
 #include "Application/CompositionRoot.h"
 #include "Application/Logger.h"
 #include "Application/SingleInstanceGuard.h"
+#include "Services/CountdownTimers.h"
 #include "Services/IThumbnailManager.h"
 
 class Checker
@@ -34,6 +35,10 @@ public:
     }
 
     void Stop() override
+    {
+    }
+
+    void UpdateHotkeys() override
     {
     }
 
@@ -128,6 +133,34 @@ int wmain()
 
         Logger::SetDirectory(std::filesystem::path());
         std::filesystem::remove_all(LogDirectory, LogError);
+    }
+
+    {
+        CountdownTimers Timers;
+        const int Short = Timers.Start("Short", 5000, 1000);
+        const int Long = Timers.Start("Long", 600000, 1000);
+        Check.Expect(Short != Long && Timers.GetTimers().size() == 2, "timers get their own ids");
+        Check.Expect(Timers.Update(3000).empty() == true, "nothing runs out early");
+        Check.Expect(Timers.GetRemaining(Timers.GetTimers()[0], 3000) == 3000, "remaining time counts down");
+
+        const std::vector<std::string> RanOut = Timers.Update(6000);
+        Check.Expect(RanOut.size() == 1 && RanOut[0] == "Short" && Timers.GetTimers()[0].Finished == true, "a timer reports once when it runs out");
+        Check.Expect(Timers.Update(7000).empty() == true, "a finished timer does not report again");
+        Check.Expect(Timers.GetRemaining(Timers.GetTimers()[0], 7000) == 0, "a finished timer has nothing left");
+
+        Timers.Update(6000 + CountdownTimers::FINISHED_VISIBLE_MS);
+        Check.Expect(Timers.GetTimers().size() == 1 && Timers.GetTimers()[0].Id == Long, "a long finished timer is dropped, a running one stays");
+        Timers.Cancel(Long);
+        Check.Expect(Timers.GetTimers().empty() == true, "a timer can be cancelled");
+
+        Check.Expect(Timers.HasScan() == false && Timers.GetScanAge(5000) == 0, "no scan to begin with");
+        Timers.MarkScan(10000);
+        Check.Expect(Timers.HasScan() == true && Timers.GetScanAge(52000) == 42000, "scan age counts up from the mark");
+        Timers.ClearScan();
+        Check.Expect(Timers.HasScan() == false, "the scan can be cleared");
+
+        Check.Expect(CountdownTimers::FormatDuration(0) == "0:00" && CountdownTimers::FormatDuration(1) == "0:01", "a partial second rounds up");
+        Check.Expect(CountdownTimers::FormatDuration(245000) == "4:05" && CountdownTimers::FormatDuration(3723000) == "1:02:03", "minutes and hours are formatted");
     }
 
     CompositionRoot Root;

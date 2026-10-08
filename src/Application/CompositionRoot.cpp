@@ -40,6 +40,11 @@ void CompositionRoot::ConnectPresenter(SettingsPresenter& Presenter)
         Manager.ArrangeThumbnails(Arrangement);
     });
 
+    Presenter.HotkeysChanged.Connect([this]()
+    {
+        Manager.UpdateHotkeys();
+    });
+
     Presenter.FrameSettingsChanged.Connect([this]()
     {
         Manager.UpdateThumbnailFrames();

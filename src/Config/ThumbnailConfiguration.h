@@ -7,6 +7,7 @@
 
 #include "Config/ClientLayout.h"
 #include "Config/Color.h"
+#include "Config/CycleGroup.h"
 #include "Config/Geometry.h"
 #include "Config/Hotkey.h"
 #include "Config/ThumbnailArrangement.h"
@@ -23,6 +24,7 @@ public:
     bool MainWindowMaximized = false;
     bool MainWindowAlwaysOnTop = false;
     bool LightTheme = false;
+    bool ShowDevelopingTabs = false;
     int ThumbnailRefreshPeriod = 500;
 
     bool EnableCompatibilityMode = false;
@@ -42,6 +44,7 @@ public:
 
     bool EnableThumbnailSnap = true;
     bool MoveAllThumbnails = false;
+    bool LockThumbnails = false;
     bool OrganizerEnabled = true;
 
     bool ThumbnailZoomEnabled = false;
@@ -70,6 +73,37 @@ public:
     int UniverseAlertVolume = 70;
     int UniverseAlertTimeout = 300;
     std::string UniverseAlertSoundPath;
+    bool UniverseIgnoreClear = true;
+    bool UniverseScaleVolumeByDistance = true;
+    bool UniverseFollowLocation = false;
+    bool UniverseUseJumpBridges = true;
+    std::string UniverseKeywords;
+    std::string UniverseKeywordSoundPath;
+
+    bool AttackAlertsEnabled = false;
+    bool AttackAlertOnDamage = true;
+    bool AttackAlertOnWarpDisruption = true;
+    bool AttackAlertSoundEnabled = true;
+    int AttackAlertVolume = 70;
+    int AttackAlertSeconds = 10;
+    std::string AttackAlertSoundPath;
+
+    bool DScanAutoRead = false;
+    int DScanShowSeconds = 30;
+    bool DScanMarksScanAge = true;
+
+    bool TimerWindowEnabled = true;
+    bool TimerShowScanAge = true;
+    std::string ScanHotkey;
+    std::string QuickTimerHotkey;
+    int QuickTimerSeconds = 60;
+    bool TimerSoundEnabled = true;
+    int TimerVolume = 70;
+    std::string TimerSoundPath;
+
+    std::vector<CycleGroup> CycleGroups;
+    std::string TogglePreviewsHotkey;
+    std::string MinimizeAllHotkey;
 
     std::vector<LayoutPreset> LayoutPresets;
 
@@ -93,6 +127,10 @@ public:
     void SetClientLayout(const std::wstring& CurrentClient, const ClientLayout& Layout);
 
     Hotkey GetClientHotkey(const std::wstring& CurrentClient) const;
+    std::vector<std::wstring> GetClientHotkeyTitles() const;
+
+    // Changes whenever any hotkey setting changes, so a listener knows when to register the hotkeys again
+    std::string GetHotkeySignature() const;
     void SetClientHotkey(const std::wstring& CurrentClient, const Hotkey& Value);
 
     bool IsPriorityClient(const std::wstring& CurrentClient) const;

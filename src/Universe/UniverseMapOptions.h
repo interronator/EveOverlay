@@ -15,4 +15,10 @@ struct UniverseMapOptions
     int SoundVolume = 70;
     int AlertSeconds = 300;
     std::string SoundPath;
+    bool IgnoreClear = true;
+    bool ScaleVolumeByDistance = true;
+    bool FollowLocation = false;
+    bool UseJumpBridges = true;
+    std::string Keywords;
+    std::string KeywordSoundPath;
 };

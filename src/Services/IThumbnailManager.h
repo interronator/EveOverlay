@@ -18,6 +18,9 @@ public:
     virtual void UpdateThumbnailFrames() = 0;
     virtual void ArrangeThumbnails(const ThumbnailArrangement& Arrangement) = 0;
 
+    // Registers the client, cycle group and global hotkeys again after any of them changed
+    virtual void UpdateHotkeys() = 0;
+
     // Added titles, removed titles
     Signal<const std::vector<std::wstring>&, const std::vector<std::wstring>&> ThumbnailListUpdated;
     Signal<Size> ThumbnailActiveSizeUpdated;

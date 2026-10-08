@@ -12,17 +12,24 @@ extern CAppModule _Module;
 
 #include "Config/ConfigurationStorage.h"
 #include "Config/ThumbnailConfiguration.h"
+#include "Services/GlobalHotkeyWindow.h"
 #include "Presenters/SettingsPresenter.h"
 #include "UI/AboutTab.h"
+#include "UI/AlertsTab.h"
 #include "UI/AccountSyncerTab.h"
 #include "UI/ClientsTab.h"
+#include "UI/DScanOverlay.h"
+#include "UI/DScanTab.h"
 #include "UI/DpiContext.h"
 #include "UI/GeneralTab.h"
 #include "UI/GuiRenderer.h"
+#include "UI/HotkeysTab.h"
 #include "UI/ITabPage.h"
 #include "UI/OrganizerTab.h"
 #include "UI/OverlayTab.h"
 #include "UI/ThumbnailTab.h"
+#include "UI/TimerOverlay.h"
+#include "UI/TimersTab.h"
 #include "UI/TrayIcon.h"
 #include "UI/UniverseMapWindow.h"
 #include "UI/UniverseTab.h"
@@ -73,6 +80,8 @@ private:
     void ApplyTheme();
 
     void ApplyUniverseSettings();
+    void ApplyTimerSettings();
+    void ApplyDScanSettings();
 
     // The map is only shown while it is switched on and at least one EVE client is open
     void UpdateUniverseMapVisibility();
@@ -109,6 +118,7 @@ private:
     void DrawInterface();
     void DrawSidebar();
     void DrawTabRow(const size_t Index);
+    bool IsPageVisible(const size_t Index) const;
     void DrawContent();
 
     ThumbnailConfiguration& Configuration;
@@ -122,10 +132,18 @@ private:
     OverlayTab Overlay;
     ClientsTab Clients;
     UniverseTab Universe;
+    AlertsTab Alerts;
+    HotkeysTab Hotkeys;
+    TimersTab TimerSettings;
+    DScanTab DScanSettings;
     AccountSyncerTab AccountSyncer;
     AboutTab About;
     std::vector<ITabPage*> Pages;
     UniverseMapWindow UniverseMap;
+    AlertSound AlertTestSound;
+    TimerOverlay TimerPanel;
+    DScanOverlay DScanPanel;
+    GlobalHotkeyWindow TimerHotkeys;
     bool ClientsOpen = false;
     bool UniverseMapShown = false;
     SettingsPresenter Presenter;
