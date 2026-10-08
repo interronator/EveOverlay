@@ -9,14 +9,19 @@ void LiveThumbnailView::RefreshThumbnail(const bool ForceRefresh)
 {
     // The old thumbnail is released only after the new one exists, to avoid flicker
     std::unique_ptr<IDwmThumbnail> ObsoleteThumbnail;
-    if (ForceRefresh == true && Thumbnail != nullptr)
+    if (Thumbnail != nullptr && Thumbnail->IsRegistered() == true)
     {
-        if (Thumbnail->IsRegistered() == true)
+        if (ForceRefresh == true)
         {
             Thumbnail->Update();
-            return;
         }
 
+        return;
+    }
+
+    // A failed registration is retried on every refresh, not only on a forced one
+    if (Thumbnail != nullptr)
+    {
         ObsoleteThumbnail = std::move(Thumbnail);
     }
 
