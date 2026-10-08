@@ -1,0 +1,15 @@
+{
+  "name": "eveoverlay",
+  "version": "1.0.0",
+  "dependencies": [
+    "nlohmann-json",
+    "wtl",
+    {
+      "name": "imgui",
+      "features": [
+        "dx11-binding",
+        "win32-binding"
+      ]
+    }
+  ]
+}
