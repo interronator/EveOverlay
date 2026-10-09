@@ -21,7 +21,6 @@ public:
     Signal<> TestSoundRequested;
     Signal<> TestKeywordSoundRequested;
     Signal<> HistoryClearRequested;
-    Signal<> OpenJumpBridgesRequested;
     Signal<const std::string&> CharacterRemoved;
 
     const std::string& GetTitle() const override;
@@ -131,7 +130,6 @@ private:
     std::string LocationCharacter;
     std::string MainCharacter;
     std::vector<std::string> Characters;
-    bool UseJumpBridges = true;
     char Keywords[256] = {};
     std::string KeywordSoundPath;
     const std::vector<IntelHistoryEntry>* History = nullptr;

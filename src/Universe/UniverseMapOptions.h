@@ -19,7 +19,6 @@ struct UniverseMapOptions
     bool ScaleVolumeByDistance = true;
     bool FollowLocation = false;
     std::string LocationCharacter;
-    bool UseJumpBridges = true;
     std::string Keywords;
     std::string KeywordSoundPath;
 };

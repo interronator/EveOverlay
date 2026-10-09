@@ -35,7 +35,6 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"UniverseIgnoreClear", &ThumbnailConfiguration::UniverseIgnoreClear},
     {"UniverseScaleVolumeByDistance", &ThumbnailConfiguration::UniverseScaleVolumeByDistance},
     {"UniverseFollowLocation", &ThumbnailConfiguration::UniverseFollowLocation},
-    {"UniverseUseJumpBridges", &ThumbnailConfiguration::UniverseUseJumpBridges},
     {"AttackAlertsEnabled", &ThumbnailConfiguration::AttackAlertsEnabled},
     {"AttackAlertOnDamage", &ThumbnailConfiguration::AttackAlertOnDamage},
     {"AttackAlertOnWarpDisruption", &ThumbnailConfiguration::AttackAlertOnWarpDisruption},
@@ -223,7 +222,6 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["UniverseIgnoreClear"] = Configuration.UniverseIgnoreClear;
     Root["UniverseScaleVolumeByDistance"] = Configuration.UniverseScaleVolumeByDistance;
     Root["UniverseFollowLocation"] = Configuration.UniverseFollowLocation;
-    Root["UniverseUseJumpBridges"] = Configuration.UniverseUseJumpBridges;
     Root["AttackAlertsEnabled"] = Configuration.AttackAlertsEnabled;
     Root["AttackAlertOnDamage"] = Configuration.AttackAlertOnDamage;
     Root["AttackAlertOnWarpDisruption"] = Configuration.AttackAlertOnWarpDisruption;

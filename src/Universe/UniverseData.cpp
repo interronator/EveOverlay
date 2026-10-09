@@ -72,39 +72,6 @@ int UniverseData::Find(const std::string& Name) const
     return Match->second;
 }
 
-int UniverseData::AddBridges(const std::string& Text)
-{
-    // The ASCII arrows need blanks around them, because system names contain hyphens
-    static const char* const SEPARATORS[] = {"\xC2\xBB", " <-> ", " --> ", " -> ", " => ", " <> ", " - "};
-
-    int Added = 0;
-    for (const std::string& RawLine : TextUtil::Split(Text, '\n'))
-    {
-        const std::string Line = TextUtil::Trim(RawLine);
-        for (const char* const Separator : SEPARATORS)
-        {
-            const size_t Position = Line.find(Separator);
-            if (Position == std::string::npos)
-            {
-                continue;
-            }
-
-            const int From = Find(Line.substr(0, Position));
-            const int To = Find(Line.substr(Position + std::char_traits<char>::length(Separator)));
-            if (From == NOT_FOUND || To == NOT_FOUND || From == To)
-            {
-                continue;
-            }
-
-            AddLink(From, To);
-            Added++;
-            break;
-        }
-    }
-
-    return Added;
-}
-
 const SolarSystem& UniverseData::Get(const int Index) const
 {
     return Systems[static_cast<size_t>(Index)];

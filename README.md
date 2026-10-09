@@ -4,7 +4,7 @@ A free Windows tool for EVE Online players who run several game clients at once.
 
 - **Live previews** of every EVE client in small floating windows
 - **Click a preview, or use a global hotkey** (set in the settings window) to jump to that client
-- **Intel Watcher map** that flashes and plays a sound when your intel channel reports a nearby system, with a list of recent reports, priority keywords, quieter alerts for distant systems, and optional jump bridges
+- **Intel Watcher map** that flashes and plays a sound when your intel channel reports a nearby system, with a list of recent reports, priority keywords, and quieter alerts for distant systems
 - **Attack alerts** that make a client's preview blink red when that character is shot at or warp scrambled
 - **Hotkeys** for each client, for stepping through groups of clients, and for hiding all previews or minimizing all clients
 - **Timers and d-scan tools**: countdown timers, a scan-age counter, and a summary of any d-scan you copy from the game
@@ -35,7 +35,7 @@ To remove it, delete the folder.
 - **Hotkeys tab.** Click a box and press keys. Give each character a hotkey, make cycle groups (next and previous client, in the order the previews sit on screen), and set keys to hide all previews or minimize all clients.
 - **Timers tab.** Start countdowns, set a quick-timer hotkey, and press a hotkey after each d-scan to see how old your scan is. A small panel floats over the game; hold Alt and drag it to move it.
 - **D-Scan tab.** Turn on automatic reading, then copy the results of the in-game directional scanner. A summary of what is on scan appears, with Black Ops, interdictors, recons, capitals and other ships worth a look flagged. Nothing is read from the clipboard until you switch this on.
-- **Intel Watcher extras.** Skip systems reported clear (`clr`, `nv`) and questions, follow your own system from the Local chat log, watch several channels at once (separate names with commas), and set priority keywords with their own sound. To count jump bridges as one jump, open `Jump Bridges.txt` from the Intel Watcher tab and add one per line, like `Jita » Perimeter`.
+- **Intel Watcher extras.** Skip systems reported clear (`clr`, `nv`) and questions, follow your own system from the Local chat log, watch several channels at once (separate names with commas), and set priority keywords with their own sound.
 - **Updates.** The About tab can check GitHub for a newer version when you press the button; it never checks on its own.
 
 Nothing here sends keys or clicks to the game, and none of it needs you to log in anywhere.

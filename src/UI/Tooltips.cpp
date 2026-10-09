@@ -70,8 +70,6 @@ const Tooltips::Entry Tooltips::ENTRIES[] = {
     {"Read copied d-scans automatically", "When you copy the results of a directional scan, show a summary over the game. Only text shaped like a scan is looked at, and nothing leaves your computer."},
     {"Show the summary for (seconds)", "How long the d-scan summary stays on screen."},
     {"Start the scan age when a d-scan is read", "Reading a d-scan also resets the scan age counter in the timer window."},
-    {"Count jump bridges as one jump", "Add the jump bridges listed in Jump Bridges.txt next to the program, so the map and its range follow bridges as well as gates."},
-    {"Jump bridge list", "Open the list of jump bridges. Put one per line, like Jita » Perimeter. Save it, then change any map setting so the map reloads it."},
     {"Lock previews in place", "Stop the right mouse button from moving or resizing the previews, so a stray drag cannot ruin your layout. Clicking to switch client still works."},
     {"Flash a preview when its character is attacked", "Watch the game logs and make a character's preview blink red when that character takes damage or is warp scrambled. The client you are playing is never flashed."},
     {"Incoming damage", "Alert when the character is being shot at, by players or by NPCs."},

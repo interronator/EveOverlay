@@ -78,16 +78,6 @@ void UniverseTab::Draw()
     Widgets::RowDivider();
     Changed = DrawLocationCharacterRow() == true || Changed == true;
     Widgets::RowDivider();
-    Changed = Widgets::ToggleRow("Count jump bridges as one jump", UseJumpBridges) == true || Changed == true;
-    Widgets::RowDivider();
-    Widgets::RowLabel("Jump bridge list", Theme::Px(190.0f));
-    if (ImGui::Button("Open Jump Bridges.txt", ImVec2(Theme::Px(190.0f), 0.0f)) == true)
-    {
-        OpenJumpBridgesRequested.Emit();
-    }
-
-    Widgets::EndRow();
-    Widgets::RowDivider();
     Changed = Widgets::NumberRow("Jumps", JumpsField, Jumps, MINIMUM_JUMPS, MAXIMUM_JUMPS, 1) == true || Changed == true;
     Widgets::RowDivider();
     Changed = DrawChannelRow() == true || Changed == true;
@@ -191,7 +181,6 @@ void UniverseTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurat
     LocationCharacter = Configuration.UniverseLocationCharacter;
     MainCharacter = Configuration.MainCharacter;
     Characters = Configuration.GetSelectableCharacters();
-    UseJumpBridges = Configuration.UniverseUseJumpBridges;
     CopyText(Keywords, sizeof(Keywords), Configuration.UniverseKeywords);
     KeywordSoundPath = Configuration.UniverseKeywordSoundPath;
 }
@@ -215,7 +204,6 @@ void UniverseTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) co
     Configuration.UniverseScaleVolumeByDistance = ScaleVolume;
     Configuration.UniverseFollowLocation = FollowLocation;
     Configuration.UniverseLocationCharacter = LocationCharacter;
-    Configuration.UniverseUseJumpBridges = UseJumpBridges;
     Configuration.UniverseKeywords = TextUtil::Trim(Keywords);
     Configuration.UniverseKeywordSoundPath = KeywordSoundPath;
 }

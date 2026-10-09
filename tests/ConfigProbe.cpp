@@ -133,6 +133,16 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Check.Expect(Reloaded.LayoutPresets[0].Arrangement.SlotCharacters == std::vector<std::string>{"Mierk", "", "Päilot"} && Reloaded.LayoutPresets[0].Arrangement.SmartStart == false, "reload preset character slots");
     Check.Expect(Reloaded.OrganizerSmartStart == false && Reloaded.OrganizerSlots == std::vector<std::string>{"Päilot", "", "Mierk"}, "reload organizer smart start and character slots");
     Check.Expect(Reloaded.DScanCopyShipList == false && Defaults.DScanCopyShipList == true, "the ship list copy setting survives a save and load");
+    {
+        std::ofstream(Directory / L"legacy.json") << "{\"UniverseUseJumpBridges\": true, \"MinimizeToTray\": true, \"UniverseSystem\": \"Amarr\"}";
+        ThumbnailConfiguration Legacy;
+        ConfigurationStorage LegacyStorage(Legacy, Directory / L"legacy.json");
+        LegacyStorage.Load();
+        Check.Expect(Legacy.MinimizeToTray == true && Legacy.UniverseSystem == "Amarr", "a config that still has the removed jump bridge setting loads normally");
+        std::error_code RemoveError;
+        std::filesystem::remove(Directory / L"legacy.json", RemoveError);
+    }
+
     Check.Expect(Defaults.TimerWindowEnabled == false && Defaults.AttackAlertsEnabled == false, "the timer window and attack alerts are off by default, like their hidden tabs");
     Check.Expect(Defaults.OrganizerSmartStart == true && Defaults.OrganizerSlots.empty() == true, "smart start is on by default with no slots chosen");
 

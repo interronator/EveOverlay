@@ -22,9 +22,6 @@ public:
     bool Load(const std::filesystem::path& CsvPath);
     int Find(const std::string& Name) const;
 
-    // Adds a link for every line naming two systems around an arrow, e.g. "Jita » Perimeter" or "A <-> B"; lines that do not
-    // name two known systems are skipped. Returns how many links were added.
-    int AddBridges(const std::string& Text);
     const SolarSystem& Get(const int Index) const;
     size_t Count() const;
 

@@ -25,10 +25,9 @@ UniverseMapWindow::GdiplusSession::~GdiplusSession()
     Gdiplus::GdiplusShutdown(Token);
 }
 
-UniverseMapWindow::UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath, std::filesystem::path JumpBridgesPath)
+UniverseMapWindow::UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath)
     : CsvPath(std::move(DataPath))
     , SettingsPath(std::move(SettingsFilePath))
-    , BridgesPath(std::move(JumpBridgesPath))
 {
 }
 
@@ -64,8 +63,6 @@ void UniverseMapWindow::Configure(const UniverseMapOptions& Options)
     FollowCheckPending = Options.FollowLocation == true && (FollowLocation == false || CharacterChanged == true);
     FollowLocation = Options.FollowLocation;
     LocationCharacter = Options.LocationCharacter;
-    UseJumpBridges = Options.UseJumpBridges;
-    ReloadIfBridgesChanged();
 
     RebuildNeighborhood();
 
@@ -315,33 +312,7 @@ void UniverseMapWindow::SavePosition() const
 void UniverseMapWindow::LoadUniverse()
 {
     Loaded = Data.Load(CsvPath);
-    BridgeCount = 0;
-    BridgesApplied = UseJumpBridges;
-    std::error_code Error;
-    BridgesStamp = UseJumpBridges == true ? std::filesystem::last_write_time(BridgesPath, Error) : std::filesystem::file_time_type();
-    if (Loaded == true && UseJumpBridges == true)
-    {
-        std::ifstream Stream(BridgesPath, std::ios::binary);
-        const std::string Text((std::istreambuf_iterator<char>(Stream)), std::istreambuf_iterator<char>());
-        BridgeCount = Data.AddBridges(Text);
-    }
-
     Listing = SystemListing::Build(Data);
-}
-
-void UniverseMapWindow::ReloadIfBridgesChanged()
-{
-    if (Loaded == false)
-    {
-        return;
-    }
-
-    std::error_code Error;
-    const std::filesystem::file_time_type Stamp = UseJumpBridges == true ? std::filesystem::last_write_time(BridgesPath, Error) : std::filesystem::file_time_type();
-    if (UseJumpBridges != BridgesApplied || Stamp != BridgesStamp)
-    {
-        Loaded = false;
-    }
 }
 
 void UniverseMapWindow::RebuildNeighborhood()
@@ -372,7 +343,7 @@ void UniverseMapWindow::RebuildNeighborhood()
 
     UniverseNeighborhood Neighborhood = UniverseNeighborhood::Build(Data, CenterSystem, MaxJumps);
     const SolarSystem& CenterInfo = Data.Get(CenterSystem);
-    Status = CenterInfo.Name + " (" + CenterInfo.Region + ") - " + std::to_string(Neighborhood.Nodes.size()) + " systems within " + std::to_string(MaxJumps) + " jumps" + (BridgeCount > 0 ? ", " + std::to_string(BridgeCount) + " jump bridges" : std::string());
+    Status = CenterInfo.Name + " (" + CenterInfo.Region + ") - " + std::to_string(Neighborhood.Nodes.size()) + " systems within " + std::to_string(MaxJumps) + " jumps";
 
     for (const NeighborhoodNode& Node : Neighborhood.Nodes)
     {

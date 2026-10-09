@@ -54,7 +54,7 @@ public:
 
     static float DistanceVolumeScale(const int Jumps, const int MaxJumps);
 
-    UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath, std::filesystem::path JumpBridgesPath);
+    UniverseMapWindow(std::filesystem::path DataPath, std::filesystem::path SettingsFilePath);
     UniverseMapWindow(const UniverseMapWindow&) = delete;
     UniverseMapWindow& operator=(const UniverseMapWindow&) = delete;
 
@@ -143,7 +143,6 @@ private:
     void LoadUniverse();
 
     // The links are part of the loaded data, so a change to the list or to the setting needs the data loaded again
-    void ReloadIfBridgesChanged();
     std::vector<UniverseMapView::NodeAlert> BuildHighlights() const;
     void AnimateAlerts();
     void PollIntel();
@@ -185,11 +184,6 @@ private:
     bool FollowLocation = false;
     std::string LocationCharacter;
     bool FollowCheckPending = false;
-    bool UseJumpBridges = true;
-    bool BridgesApplied = false;
-    std::filesystem::path BridgesPath;
-    std::filesystem::file_time_type BridgesStamp;
-    int BridgeCount = 0;
     std::unordered_set<int> Candidates;
     std::unordered_set<std::string> WorkedChannels;
     std::unordered_map<int, ULONGLONG> AlertStart;

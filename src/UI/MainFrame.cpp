@@ -18,7 +18,7 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
     : Configuration(ConfigurationReference)
     , TaskbarCreatedMessage(::RegisterWindowMessageW(L"TaskbarCreated"))
     , Pages{&General, &Thumbnail, &Organizer, &Zoom, &Overlay, &Clients, &Hotkeys, &Universe, &Alerts, &TimerSettings, &DScanSettings, &AccountSyncer, &About}
-    , UniverseMap(AppPaths::GetUniverseDataPath(), AppPaths::GetUniverseMapSettingsPath(), AppPaths::GetJumpBridgesPath())
+    , UniverseMap(AppPaths::GetUniverseDataPath(), AppPaths::GetUniverseMapSettingsPath())
     , TimerPanel(AppPaths::GetUniverseMapSettingsPath())
     , DScanPanel(AppPaths::GetShipDataPath(), AppPaths::GetUniverseMapSettingsPath())
     , Presenter(ConfigurationReference, StorageReference, Pages, Thumbnail, Clients, Organizer, Hotkeys)
@@ -149,20 +149,6 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
         UniverseMap.PlayKeywordAlert();
     });
 
-    Universe.OpenJumpBridgesRequested.Connect([this]()
-    {
-        const std::filesystem::path Path = AppPaths::GetJumpBridgesPath();
-        std::error_code Error;
-        if (std::filesystem::exists(Path, Error) == false)
-        {
-            std::ofstream Stream(Path, std::ios::binary);
-            Stream << "# One jump bridge per line, for example:  Jita » Perimeter  or  Jita <-> Perimeter\r\n"
-                   << "# Lines starting with # are ignored. Save the file, then change any setting for the map to pick it up.\r\n";
-        }
-
-        ::ShellExecuteW(m_hWnd, L"open", Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-    });
-
     Universe.HistoryClearRequested.Connect([this]()
     {
         UniverseMap.ClearHistory();
@@ -260,7 +246,6 @@ void MainFrame::ApplyUniverseSettings()
     Options.ScaleVolumeByDistance = Configuration.UniverseScaleVolumeByDistance;
     Options.FollowLocation = Configuration.UniverseFollowLocation;
     Options.LocationCharacter = Configuration.UniverseLocationCharacter;
-    Options.UseJumpBridges = Configuration.UniverseUseJumpBridges;
     Options.Keywords = Configuration.UniverseKeywords;
     Options.KeywordSoundPath = Configuration.UniverseKeywordSoundPath;
     UniverseMap.Configure(Options);

@@ -294,19 +294,6 @@ int main(const int ArgumentCount, const char* const Arguments[])
     const std::vector<GameLogEvent> NewSession = GameLogs.Poll();
     Check.Expect(NewSession.size() == 1 && NewSession[0].Character == "Pilot Two", "a log created after the start is read from its beginning");
 
-    {
-        UniverseData Bridged;
-        Bridged.Load(CsvPath);
-        const int Origin = Bridged.Find("Jita");
-        const int Far = Bridged.Find("DY-F70");
-        const int Before = UniverseNeighborhood::Build(Bridged, Origin, 1).Nodes.size() == 0 ? 0 : static_cast<int>(UniverseNeighborhood::Build(Bridged, Origin, 1).Nodes.size());
-        const int Added = Bridged.AddBridges("Jita \xC2\xBB DY-F70\nDY-F70 <-> Perimeter\nnonsense\nJita -> Nowhere-Land\n  \nJita - Jita\n");
-        Check.Expect(Added == 2, "two valid bridge lines are added, bad ones skipped");
-        const std::vector<int>& Linked = Bridged.Get(Origin).Neighbours;
-        Check.Expect(std::find(Linked.begin(), Linked.end(), Far) != Linked.end(), "a bridge makes a distant system a direct neighbour");
-        Check.Expect(UniverseNeighborhood::Build(Bridged, Origin, 1).Nodes.size() > static_cast<size_t>(Before), "the bridge widens the one jump map");
-    }
-
     Check.Expect(UpdateChecker::IsNewer("v1.0.2", "1.0.1") == true && UpdateChecker::IsNewer("v1.10.0", "1.9.9") == true, "a higher version is newer, compared by number");
     Check.Expect(UpdateChecker::IsNewer("v1.0.1", "1.0.1") == false && UpdateChecker::IsNewer("1.0", "1.0.0") == false && UpdateChecker::IsNewer("v1.0.0", "1.0.1") == false, "the same or older version is not newer");
     Check.Expect(UpdateChecker::IsNewer("latest", "1.0.1") == false && UpdateChecker::IsNewer("v2.0.0", "unknown") == false, "versions that cannot be read are never newer");

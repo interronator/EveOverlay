@@ -82,7 +82,6 @@ public:
     bool UniverseScaleVolumeByDistance = true;
     bool UniverseFollowLocation = false;
     std::string UniverseLocationCharacter;
-    bool UniverseUseJumpBridges = true;
     std::string UniverseKeywords;
     std::string UniverseKeywordSoundPath;
 
