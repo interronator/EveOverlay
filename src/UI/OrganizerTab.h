@@ -69,7 +69,7 @@ private:
     bool MoveAll = false;
     bool AutoDetect = true;
     int DetectedCount = 0;
-    int ManualCount = 4;
+    int ManualCount = MINIMUM_CLIENTS;
     GridShape SelectedShape;
     int Gap = 0;
     int OriginX = 0;

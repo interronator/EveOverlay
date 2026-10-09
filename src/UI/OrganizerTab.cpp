@@ -86,6 +86,11 @@ void OrganizerTab::SetMoveAll(const bool NewValue)
 
 void OrganizerTab::SetDetectedCount(const int Count)
 {
+    if (Count < 1 && DetectedCount >= 1)
+    {
+        ManualCount = MINIMUM_CLIENTS;
+    }
+
     DetectedCount = Count;
 }
 
