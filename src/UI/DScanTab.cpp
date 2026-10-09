@@ -33,12 +33,23 @@ void DScanTab::Draw()
     Widgets::RowDivider();
     Changed = Widgets::ToggleRow("Start the scan age when a d-scan is read", MarksScanAge) == true || Changed == true;
     Widgets::RowDivider();
+    Changed = Widgets::ToggleRow("Copy the ship list to the clipboard", CopyShipList) == true || Changed == true;
+    Widgets::RowDivider();
 
     const float ButtonWidth = Theme::Px(190.0f);
     Widgets::RowLabel("Clipboard", ButtonWidth);
     if (ImGui::Button("Read clipboard now", ImVec2(ButtonWidth, 0.0f)) == true)
     {
         ReadNowRequested.Emit();
+    }
+
+    Widgets::EndRow();
+    Widgets::RowDivider();
+
+    Widgets::RowLabel("Ship list", ButtonWidth);
+    if (ImGui::Button("Copy ship list now", ImVec2(ButtonWidth, 0.0f)) == true)
+    {
+        CopyListRequested.Emit();
     }
 
     Widgets::EndRow();
@@ -91,6 +102,27 @@ void DScanTab::DrawResult()
     }
 
     Widgets::EndCard();
+
+    if (Result->Ships.empty() == true)
+    {
+        return;
+    }
+
+    Widgets::SectionLabel("SHIPS ON SCAN");
+    Widgets::BeginCard("##DScanShips");
+    for (size_t Index = 0; Index < Result->Ships.size(); Index++)
+    {
+        if (Index > 0)
+        {
+            Widgets::RowDivider();
+        }
+
+        const DScanShipCount& Ship = Result->Ships[Index];
+        const std::string Name = Ship.TypeName + " (" + Ship.Group + ")";
+        Widgets::InfoRow(Name.c_str(), std::to_string(Ship.Count).c_str());
+    }
+
+    Widgets::EndCard();
 }
 
 void DScanTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration)
@@ -98,6 +130,7 @@ void DScanTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration
     AutoRead = Configuration.DScanAutoRead;
     ShowSeconds = Configuration.DScanShowSeconds;
     MarksScanAge = Configuration.DScanMarksScanAge;
+    CopyShipList = Configuration.DScanCopyShipList;
 }
 
 void DScanTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
@@ -105,4 +138,5 @@ void DScanTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
     Configuration.DScanAutoRead = AutoRead;
     Configuration.DScanShowSeconds = ShowSeconds;
     Configuration.DScanMarksScanAge = MarksScanAge;
+    Configuration.DScanCopyShipList = CopyShipList;
 }

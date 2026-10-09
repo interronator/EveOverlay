@@ -38,12 +38,23 @@ struct DScanClassCount
     int Count = 0;
 };
 
+// How many of one kind of ship were on scan, such as 3 Hurricane, with the group it belongs to
+struct DScanShipCount
+{
+    std::string TypeName;
+    std::string Group;
+    int Count = 0;
+};
+
 struct DScanResult
 {
     int Lines = 0;
     int Recognized = 0;
     bool LooksLikeScan = false;
     std::vector<DScanClassCount> Classes;
+
+    // Every kind of ship on scan with how many, the most common first; drones, NPCs and structures are left out
+    std::vector<DScanShipCount> Ships;
 
     // Most worrying first
     std::vector<DScanFlag> Flags;
@@ -58,6 +69,9 @@ public:
 
     static ShipClass Classify(const ShipType& Type);
     static const char* GetClassLabel(const ShipClass Class);
+
+    // One line per kind of ship, most common first, such as "2x Hurricane"; empty when no ships were on scan
+    static std::string FormatShipList(const DScanResult& Result);
 
     // False when the group is nothing special; Severity is higher for the more worrying ones
     static bool TryGetDanger(const std::string& Group, std::string* const Reason, int* const Severity);

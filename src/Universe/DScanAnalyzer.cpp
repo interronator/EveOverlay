@@ -126,6 +126,22 @@ const char* DScanAnalyzer::GetClassLabel(const ShipClass Class)
     return "Other objects";
 }
 
+std::string DScanAnalyzer::FormatShipList(const DScanResult& Result)
+{
+    std::string List;
+    for (const DScanShipCount& Ship : Result.Ships)
+    {
+        if (List.empty() == false)
+        {
+            List += "\n";
+        }
+
+        List += std::to_string(Ship.Count) + "x " + Ship.TypeName;
+    }
+
+    return List;
+}
+
 bool DScanAnalyzer::TryGetDanger(const std::string& Group, std::string* const Reason, int* const Severity)
 {
     const GroupRule* const Rule = FindRule(Group);
@@ -220,6 +236,7 @@ DScanResult DScanAnalyzer::Analyze(const ShipCatalog& Catalog, const std::string
 {
     DScanResult Result;
     std::map<ShipClass, int> ClassTotals;
+    std::map<std::string, DScanShipCount> ShipsByType;
     std::map<std::string, DScanFlag> FlagsByType;
     int ScanShapedLines = 0;
 
@@ -254,6 +271,13 @@ DScanResult DScanAnalyzer::Analyze(const ShipCatalog& Catalog, const std::string
 
         Result.Recognized++;
         ClassTotals[Classify(*Type)]++;
+        if (Type->Category == "Ship")
+        {
+            DScanShipCount& Ship = ShipsByType[Type->Name];
+            Ship.TypeName = Type->Name;
+            Ship.Group = Type->Group;
+            Ship.Count++;
+        }
 
         std::string Reason;
         int Severity = 0;
@@ -282,6 +306,21 @@ DScanResult DScanAnalyzer::Analyze(const ShipCatalog& Catalog, const std::string
     {
         Result.Classes.push_back(DScanClassCount{Entry.first, Entry.second});
     }
+
+    for (const std::pair<const std::string, DScanShipCount>& Entry : ShipsByType)
+    {
+        Result.Ships.push_back(Entry.second);
+    }
+
+    std::sort(Result.Ships.begin(), Result.Ships.end(), [](const DScanShipCount& Left, const DScanShipCount& Right)
+    {
+        if (Left.Count != Right.Count)
+        {
+            return Left.Count > Right.Count;
+        }
+
+        return Left.TypeName < Right.TypeName;
+    });
 
     for (const std::pair<const std::string, DScanFlag>& Entry : FlagsByType)
     {

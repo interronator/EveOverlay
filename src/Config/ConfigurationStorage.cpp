@@ -42,6 +42,7 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"AttackAlertSoundEnabled", &ThumbnailConfiguration::AttackAlertSoundEnabled},
     {"DScanAutoRead", &ThumbnailConfiguration::DScanAutoRead},
     {"DScanMarksScanAge", &ThumbnailConfiguration::DScanMarksScanAge},
+    {"DScanCopyShipList", &ThumbnailConfiguration::DScanCopyShipList},
     {"TimerWindowEnabled", &ThumbnailConfiguration::TimerWindowEnabled},
     {"TimerShowScanAge", &ThumbnailConfiguration::TimerShowScanAge},
     {"TimerSoundEnabled", &ThumbnailConfiguration::TimerSoundEnabled},
@@ -196,6 +197,7 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["MoveAllThumbnails"] = Configuration.MoveAllThumbnails;
     Root["LockThumbnails"] = Configuration.LockThumbnails;
     Root["ThumbnailOrganizerEnabled"] = Configuration.OrganizerEnabled;
+    Root["OrganizerSmartStart"] = Configuration.OrganizerSmartStart;
     Root["EnableThumbnailZoom"] = Configuration.ThumbnailZoomEnabled;
     Root["ThumbnailZoomFactor"] = Configuration.ThumbnailZoomFactor;
     Root["ThumbnailZoomAnchor"] = static_cast<int>(Configuration.ThumbnailZoomAnchor);
@@ -231,6 +233,7 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
     Root["DScanAutoRead"] = Configuration.DScanAutoRead;
     Root["DScanShowSeconds"] = Configuration.DScanShowSeconds;
     Root["DScanMarksScanAge"] = Configuration.DScanMarksScanAge;
+    Root["DScanCopyShipList"] = Configuration.DScanCopyShipList;
     Root["TimerWindowEnabled"] = Configuration.TimerWindowEnabled;
     Root["TimerShowScanAge"] = Configuration.TimerShowScanAge;
     Root["TimerSoundEnabled"] = Configuration.TimerSoundEnabled;

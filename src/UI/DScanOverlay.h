@@ -14,6 +14,7 @@ struct DScanOverlayOptions
 {
     bool AutoRead = false;
     int ShowSeconds = 30;
+    bool CopyShipList = true;
 };
 
 // Reads a directional scan copied from the game and summarises it in a small panel over the game. Nothing is read from the
@@ -34,6 +35,9 @@ public:
     // Reads whatever text is on the clipboard now; false when it is not a scan
     bool ReadClipboardNow();
 
+    // Puts the ship list of the last scan on the clipboard; false when there is nothing to copy or the clipboard is busy
+    bool CopyShipListToClipboard();
+
     // The result of the last scan that was read; empty before the first one
     const DScanResult& GetLastResult() const;
     bool HasResult() const;
@@ -43,8 +47,10 @@ private:
     static constexpr UINT TICK_INTERVAL_MS = 500;
     static constexpr float PANEL_WIDTH = 290.0f;
     static constexpr size_t MAXIMUM_FLAG_ROWS = 5;
+    static constexpr size_t MAXIMUM_SHIP_ROWS = 8;
 
     // Opened tells whether the clipboard could be opened at all, which is true even when it holds no text
+    static bool TrySetClipboardText(const std::string& Text);
     static bool TryGetClipboardText(std::string* const Text, bool* const Opened = nullptr);
 
     bool Accept(const std::string& Text);

@@ -12,6 +12,7 @@ class DScanTab : public ITabPage
 {
 public:
     Signal<> ReadNowRequested;
+    Signal<> CopyListRequested;
 
     const std::string& GetTitle() const override;
     const std::string& GetDescription() const override;
@@ -37,5 +38,6 @@ private:
     bool AutoRead = false;
     int ShowSeconds = 30;
     bool MarksScanAge = true;
+    bool CopyShipList = true;
     SliderInputField SecondsField;
 };

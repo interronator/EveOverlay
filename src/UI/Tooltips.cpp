@@ -48,6 +48,8 @@ const Tooltips::Entry Tooltips::ENTRIES[] = {
     {"Volume", "Loudness of the alert sound."},
     {"Sound", "Choose the alert sound, go back to the built-in one, or play it to check the volume."},
     {"Start where my previews are", "When most of your previews are already grouped together, Apply layout starts the grid at that group instead of the Start X and Y below, and keeps it on screen. Start X and Y are used when no group is found."},
+    {"Copy the ship list to the clipboard", "After a scan is read, put the ships and how many there are on the clipboard, one per line like 2x Hurricane, ready to paste into chat. This replaces what was on the clipboard."},
+    {"Ship list", "Copy the ships from the last scan to the clipboard, one per line like 2x Hurricane."},
     {"Use Character local", "Move the map's centre to the system a character is in, read from that character's Local chat log. Wormhole systems are not on the map and are ignored."},
     {"Character to use", "Whose Local chat log to read. The list fills in from the EVE clients you open. Any character follows whichever logged-in character moved last."},
     {"Quieter sound for distant systems", "Play the alert at full volume for your own system and quieter the further away the reported system is, down to 40% at the edge of the map."},

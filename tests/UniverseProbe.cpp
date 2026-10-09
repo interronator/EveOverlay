@@ -341,6 +341,20 @@ int main(const int ArgumentCount, const char* const Arguments[])
     }
 
     Check.Expect(ClassTotals[ShipClass::Combat] == 4 && ClassTotals[ShipClass::OtherShip] == 1 && ClassTotals[ShipClass::Npc] == 1 && ClassTotals[ShipClass::Unknown] == 1, "ships are sorted into classes");
+    std::map<std::string, int> ShipTotals;
+    for (const DScanShipCount& Entry : Summary.Ships)
+    {
+        ShipTotals[Entry.TypeName] = Entry.Count;
+    }
+
+    Check.Expect(Summary.Ships.size() == 4 && ShipTotals["Sin"] == 1 && ShipTotals["Hurricane"] == 2 && ShipTotals["Pontifex"] == 1 && ShipTotals["Capsule"] == 1, "each kind of ship is counted by name");
+    Check.Expect(Summary.Ships.empty() == false && Summary.Ships[0].TypeName == "Hurricane" && Summary.Ships[0].Count == 2 && Summary.Ships[0].Group == "Combat Battlecruiser", "the most common ship comes first and knows its group");
+    Check.Expect(ShipTotals.count("Enforcer Drone") == 0 && ShipTotals.count("Mystery") == 0, "drones and unknown objects are not listed as ships");
+    Check.Expect(DScanAnalyzer::Analyze(Ships, "").Ships.empty() == true, "an empty scan lists no ships");
+    const std::string ShipList = DScanAnalyzer::FormatShipList(Summary);
+    Check.Expect(ShipList.rfind("2x Hurricane\n", 0) == 0 && ShipList.find("1x Sin") != std::string::npos && ShipList.find("1x Capsule") != std::string::npos, "the ship list names each ship with its count, most common first");
+    Check.Expect(std::count(ShipList.begin(), ShipList.end(), '\n') == 3 && ShipList.back() != '\n', "the ship list has one line per kind of ship and no trailing break");
+    Check.Expect(DScanAnalyzer::FormatShipList(DScanResult()).empty() == true, "no ships give an empty list");
     Check.Expect(Summary.Flags.size() == 2 && Summary.Flags[0].TypeName == "Sin" && Summary.Flags[1].TypeName == "Pontifex", "worrying ships are flagged, worst first");
     Check.Expect(Summary.Flags.size() == 2 && std::abs(Summary.Flags[0].NearestMeters / 149597870700.0 - 3.2) < 0.001 && Summary.Flags[1].NearestMeters < 0.0, "flag keeps the distance when the scan gave one");
     Check.Expect(DScanAnalyzer::Analyze(Ships, "hello\nthere\nthis is chat").LooksLikeScan == false, "ordinary text is not a scan");

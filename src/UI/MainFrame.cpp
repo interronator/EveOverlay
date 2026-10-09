@@ -73,6 +73,11 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
         DScanSettings.SetResult(DScanPanel.HasResult() == true ? &DScanPanel.GetLastResult() : nullptr);
     });
 
+    DScanSettings.CopyListRequested.Connect([this]()
+    {
+        DScanSettings.SetStatus(DScanPanel.CopyShipListToClipboard() == true ? std::string() : "There is no ship list to copy yet, or the clipboard is busy.");
+    });
+
     DScanPanel.ScanRead.Connect([this]()
     {
         DScanSettings.SetResult(&DScanPanel.GetLastResult());
@@ -290,6 +295,7 @@ void MainFrame::ApplyDScanSettings()
     DScanOverlayOptions Options;
     Options.AutoRead = Configuration.DScanAutoRead;
     Options.ShowSeconds = Configuration.DScanShowSeconds;
+    Options.CopyShipList = Configuration.DScanCopyShipList;
     DScanPanel.Configure(Options);
 }
 

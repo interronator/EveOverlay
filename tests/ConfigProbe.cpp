@@ -84,6 +84,7 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Full.ActiveClientHighlightColor = Color{255, 1, 2, 3};
     Full.LayoutPresets.push_back(LayoutPreset{"Five wide", 5, ThumbnailArrangement{GridShape{5, 1, true}, 8, Point{-20, 30}, {"Mierk", "", "Päilot"}}});
     Full.OrganizerSmartStart = false;
+    Full.DScanCopyShipList = false;
     Full.OrganizerSlots = {"Päilot", "", "Mierk"};
     Full.UniverseIgnoreClear = false;
     Full.UniverseScaleVolumeByDistance = false;
@@ -131,6 +132,7 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
 
     Check.Expect(Reloaded.LayoutPresets[0].Arrangement.SlotCharacters == std::vector<std::string>{"Mierk", "", "Päilot"} && Reloaded.LayoutPresets[0].Arrangement.SmartStart == false, "reload preset character slots");
     Check.Expect(Reloaded.OrganizerSmartStart == false && Reloaded.OrganizerSlots == std::vector<std::string>{"Päilot", "", "Mierk"}, "reload organizer smart start and character slots");
+    Check.Expect(Reloaded.DScanCopyShipList == false && Defaults.DScanCopyShipList == true, "the ship list copy setting survives a save and load");
     Check.Expect(Defaults.OrganizerSmartStart == true && Defaults.OrganizerSlots.empty() == true, "smart start is on by default with no slots chosen");
 
     Check.Expect(Reloaded.UniverseIgnoreClear == false && Reloaded.UniverseScaleVolumeByDistance == false && Reloaded.UniverseFollowLocation == true, "reload intel switches");

@@ -1,6 +1,7 @@
 #include "UI/DScanOverlay.h"
 
 #include <algorithm>
+#include <cstring>
 #include <utility>
 
 #include "Config/TextUtil.h"
@@ -82,6 +83,56 @@ bool DScanOverlay::TryGetClipboardText(std::string* const Text, bool* const Open
     return Read;
 }
 
+bool DScanOverlay::TrySetClipboardText(const std::string& Text)
+{
+    const std::wstring Wide = TextUtil::FromUtf8(Text);
+    const SIZE_T Bytes = (Wide.size() + 1) * sizeof(wchar_t);
+    const HGLOBAL Memory = ::GlobalAlloc(GMEM_MOVEABLE, Bytes);
+    if (Memory == nullptr)
+    {
+        return false;
+    }
+
+    void* const Destination = ::GlobalLock(Memory);
+    if (Destination == nullptr)
+    {
+        ::GlobalFree(Memory);
+        return false;
+    }
+
+    std::memcpy(Destination, Wide.c_str(), Bytes);
+    ::GlobalUnlock(Memory);
+
+    if (::OpenClipboard(nullptr) == FALSE)
+    {
+        ::GlobalFree(Memory);
+        return false;
+    }
+
+    ::EmptyClipboard();
+    const bool Stored = ::SetClipboardData(CF_UNICODETEXT, Memory) != nullptr;
+    ::CloseClipboard();
+    if (Stored == false)
+    {
+        ::GlobalFree(Memory);
+    }
+
+    return Stored;
+}
+
+bool DScanOverlay::CopyShipListToClipboard()
+{
+    const std::string List = DScanAnalyzer::FormatShipList(LastResult);
+    if (ResultReady == false || List.empty() == true || TrySetClipboardText(List) == false)
+    {
+        return false;
+    }
+
+    // Our own copy must not be mistaken for a new scan to read
+    LastClipboardSequence = ::GetClipboardSequenceNumber();
+    return true;
+}
+
 bool DScanOverlay::ReadClipboardNow()
 {
     std::string Text;
@@ -100,6 +151,11 @@ bool DScanOverlay::Accept(const std::string& Text)
     ResultReady = true;
     HideAtTick = ::GetTickCount64() + static_cast<ULONGLONG>(std::max(5, Settings.ShowSeconds)) * 1000ULL;
     Refresh();
+    if (Settings.CopyShipList == true)
+    {
+        CopyShipListToClipboard();
+    }
+
     ScanRead.Emit();
     return true;
 }
@@ -154,6 +210,39 @@ std::vector<PanelRow> DScanOverlay::BuildRows() const
         Row.Label = DScanAnalyzer::GetClassLabel(Entry.Class);
         Row.Value = std::to_string(Entry.Count);
         Rows.push_back(std::move(Row));
+    }
+
+    if (LastResult.Ships.empty() == false)
+    {
+        PanelRow Ships;
+        Ships.Heading = true;
+        Ships.Label = "Ships on scan";
+        Ships.Red = 130;
+        Ships.Green = 200;
+        Ships.Blue = 255;
+        Rows.push_back(std::move(Ships));
+
+        for (size_t Index = 0; Index < LastResult.Ships.size() && Index < MAXIMUM_SHIP_ROWS; Index++)
+        {
+            PanelRow Row;
+            Row.Label = LastResult.Ships[Index].TypeName;
+            Row.Value = std::to_string(LastResult.Ships[Index].Count);
+            Rows.push_back(std::move(Row));
+        }
+
+        if (LastResult.Ships.size() > MAXIMUM_SHIP_ROWS)
+        {
+            int Hidden = 0;
+            for (size_t Index = MAXIMUM_SHIP_ROWS; Index < LastResult.Ships.size(); Index++)
+            {
+                Hidden += LastResult.Ships[Index].Count;
+            }
+
+            PanelRow More;
+            More.Label = "Other ships";
+            More.Value = std::to_string(Hidden);
+            Rows.push_back(std::move(More));
+        }
     }
 
     if (LastResult.Flags.empty() == true)

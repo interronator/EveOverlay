@@ -97,6 +97,7 @@ public:
     bool DScanAutoRead = false;
     int DScanShowSeconds = 30;
     bool DScanMarksScanAge = true;
+    bool DScanCopyShipList = true;
 
     bool TimerWindowEnabled = true;
     bool TimerShowScanAge = true;
