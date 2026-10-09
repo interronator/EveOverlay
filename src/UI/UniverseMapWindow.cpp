@@ -213,12 +213,65 @@ LRESULT UniverseMapWindow::OnTimer(UINT, WPARAM Parameter, LPARAM, BOOL& Handled
 
 LRESULT UniverseMapWindow::OnHitTest(UINT, WPARAM, LPARAM, BOOL&)
 {
-    return HTCAPTION;
+    return HTCLIENT;
 }
 
-LRESULT UniverseMapWindow::OnEnterSizeMove(UINT, WPARAM, LPARAM, BOOL&)
+LRESULT UniverseMapWindow::OnMouseDown(UINT, WPARAM, LPARAM, BOOL&)
 {
+    RECT Bounds = {};
+    ::GetWindowRect(m_hWnd, &Bounds);
+    ::GetCursorPos(&DragCursorStart);
+    DragWindowStart.x = Bounds.left;
+    DragWindowStart.y = Bounds.top;
     Dragging = true;
+    SetCapture();
+    return 0;
+}
+
+LRESULT UniverseMapWindow::OnMouseMove(UINT, WPARAM, LPARAM, BOOL& Handled)
+{
+    if (Dragging == false)
+    {
+        Handled = FALSE;
+        return 0;
+    }
+
+    POINT Cursor = {};
+    ::GetCursorPos(&Cursor);
+
+    const int PixelSize = GetPixelSize();
+    const int ScreenLeft = ::GetSystemMetrics(SM_XVIRTUALSCREEN);
+    const int ScreenTop = ::GetSystemMetrics(SM_YVIRTUALSCREEN);
+    const int ScreenRight = ScreenLeft + ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    const int ScreenBottom = ScreenTop + ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+    const int WantedLeft = DragWindowStart.x + Cursor.x - DragCursorStart.x;
+    const int WantedTop = DragWindowStart.y + Cursor.y - DragCursorStart.y;
+    const int Left = std::clamp(WantedLeft, ScreenLeft - PixelSize / 2, ScreenRight - PixelSize / 2);
+    const int Top = std::clamp(WantedTop, ScreenTop - PixelSize / 2, ScreenBottom - PixelSize / 2);
+    SetWindowPos(nullptr, Left, Top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    return 0;
+}
+
+LRESULT UniverseMapWindow::OnMouseUp(UINT, WPARAM, LPARAM, BOOL&)
+{
+    if (Dragging == true)
+    {
+        ::ReleaseCapture();
+    }
+
+    return 0;
+}
+
+LRESULT UniverseMapWindow::OnCaptureChanged(UINT, WPARAM, LPARAM, BOOL&)
+{
+    if (Dragging == false)
+    {
+        return 0;
+    }
+
+    Dragging = false;
+    SavePosition();
     return 0;
 }
 
@@ -239,13 +292,6 @@ void UniverseMapWindow::UpdateMoveMode()
 LRESULT UniverseMapWindow::OnMouseActivate(UINT, WPARAM, LPARAM, BOOL&)
 {
     return MA_NOACTIVATE;
-}
-
-LRESULT UniverseMapWindow::OnExitSizeMove(UINT, WPARAM, LPARAM, BOOL&)
-{
-    Dragging = false;
-    SavePosition();
-    return 0;
 }
 
 LRESULT UniverseMapWindow::OnDpiChanged(UINT, WPARAM, LPARAM, BOOL&)

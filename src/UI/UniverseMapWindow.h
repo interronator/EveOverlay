@@ -37,8 +37,10 @@ public:
         MESSAGE_HANDLER(WM_TIMER, OnTimer)
         MESSAGE_HANDLER(WM_NCHITTEST, OnHitTest)
         MESSAGE_HANDLER(WM_MOUSEACTIVATE, OnMouseActivate)
-        MESSAGE_HANDLER(WM_ENTERSIZEMOVE, OnEnterSizeMove)
-        MESSAGE_HANDLER(WM_EXITSIZEMOVE, OnExitSizeMove)
+        MESSAGE_HANDLER(WM_LBUTTONDOWN, OnMouseDown)
+        MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
+        MESSAGE_HANDLER(WM_LBUTTONUP, OnMouseUp)
+        MESSAGE_HANDLER(WM_CAPTURECHANGED, OnCaptureChanged)
         MESSAGE_HANDLER(WM_DPICHANGED, OnDpiChanged)
     END_MSG_MAP()
 
@@ -125,9 +127,13 @@ private:
     // Only reachable while Alt is held, because the window is click-through otherwise
     LRESULT OnHitTest(UINT, WPARAM, LPARAM, BOOL&);
 
-    LRESULT OnEnterSizeMove(UINT, WPARAM, LPARAM, BOOL&);
+    // The map is dragged by hand rather than by the system move loop, which keeps a window from leaving the top of the screen.
+    // The map may hang partly off the screen, but its centre stays on it.
+    LRESULT OnMouseDown(UINT, WPARAM, LPARAM, BOOL&);
+    LRESULT OnMouseMove(UINT, WPARAM, LPARAM, BOOL&);
+    LRESULT OnMouseUp(UINT, WPARAM, LPARAM, BOOL&);
     LRESULT OnMouseActivate(UINT, WPARAM, LPARAM, BOOL&);
-    LRESULT OnExitSizeMove(UINT, WPARAM, LPARAM, BOOL&);
+    LRESULT OnCaptureChanged(UINT, WPARAM, LPARAM, BOOL&);
     LRESULT OnDpiChanged(UINT, WPARAM, LPARAM, BOOL&);
 
     // Alt can only be polled: the game owns the keyboard focus, so this window never sees the key
@@ -203,4 +209,6 @@ private:
     ULONGLONG LastAlertTick = 0;
     bool MoveMode = false;
     bool Dragging = false;
+    POINT DragCursorStart = {};
+    POINT DragWindowStart = {};
 };
