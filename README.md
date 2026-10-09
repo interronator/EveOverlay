@@ -63,12 +63,14 @@ To make the release zip yourself, build first, then run `powershell -ExecutionPo
 | `build.bat`, `package.ps1` | One-click build, and release zip packaging |
 | `CMakeLists.txt`, `CMakePresets.json`, `vcpkg.json` | Build configuration |
 
-## License and credits
+## Images
 
 <img width="878" height="1228" alt="image" src="https://github.com/user-attachments/assets/fbb82cfb-3c0f-48df-b472-732f9f2c3b11" />
 
 <img width="882" height="1230" alt="image" src="https://github.com/user-attachments/assets/545196d2-5c2a-4f5e-b1e7-eb67b38e99bb" />
 
 <img width="877" height="1228" alt="image" src="https://github.com/user-attachments/assets/c1b6f293-8d82-4e71-8a24-d63954c29795" />
+
+## License and credits
 
 Released under the [MIT License](LICENSE). Third-party libraries and data sources are listed in [docs/CREDITS.md](docs/CREDITS.md). Eve Overlay is a C++ rewrite inspired by the original EVE-O Preview.
