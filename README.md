@@ -69,6 +69,8 @@ To make the release zip yourself, build first, then run `powershell -ExecutionPo
 
 <img width="882" height="1230" alt="image" src="https://github.com/user-attachments/assets/545196d2-5c2a-4f5e-b1e7-eb67b38e99bb" />
 
+<img width="370" height="257" alt="image" src="https://github.com/user-attachments/assets/f25b9ed3-4b8d-4e08-90ba-571c5c406ae7" />
+
 <img width="877" height="1228" alt="image" src="https://github.com/user-attachments/assets/c1b6f293-8d82-4e71-8a24-d63954c29795" />
 
 ## License and credits
