@@ -19,6 +19,10 @@ public:
     virtual void MoveWindow(HWND Window, int Left, int Top, int Width, int Height) const = 0;
     virtual void MaximizeWindow(HWND Window) const = 0;
     virtual RECT GetWindowPosition(HWND Window) const = 0;
+
+    // The usable area of the monitor nearest to the point; empty when it cannot be found
+    virtual RECT GetWorkArea(POINT Location) const = 0;
+
     virtual bool IsWindowMaximized(HWND Window) const = 0;
     virtual bool IsWindowMinimized(HWND Window) const = 0;
 

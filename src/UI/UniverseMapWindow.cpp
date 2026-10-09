@@ -60,8 +60,10 @@ void UniverseMapWindow::Configure(const UniverseMapOptions& Options)
 
     // The current system is looked up on the next poll instead of here, because a change of home system saves the settings,
     // which would call back into this function
-    FollowCheckPending = Options.FollowLocation == true && FollowLocation == false;
+    const bool CharacterChanged = TextUtil::EqualsIgnoreCase(Options.LocationCharacter, LocationCharacter) == false;
+    FollowCheckPending = Options.FollowLocation == true && (FollowLocation == false || CharacterChanged == true);
     FollowLocation = Options.FollowLocation;
+    LocationCharacter = Options.LocationCharacter;
     UseJumpBridges = Options.UseJumpBridges;
     ReloadIfBridgesChanged();
 
@@ -576,6 +578,7 @@ void UniverseMapWindow::PollLocation()
 
     LocalWatcher.SetExactChannelMatch(true);
     LocalWatcher.SetIncludeSystemMessages(true);
+    LocalWatcher.SetListener(LocationCharacter);
     LocalWatcher.SetChannel("Local");
 
     if (FollowCheckPending == true)

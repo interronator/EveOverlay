@@ -224,6 +224,20 @@ int main(const int ArgumentCount, const char* const Arguments[])
     LocalWatcher.SetChannel("Local");
     Check.Expect(LocalWatcher.FindCurrentSystem() == "Perimeter", "newest channel change across characters wins, other channels ignored");
 
+    ChatLogWatcher PilotWatcher;
+    PilotWatcher.SetDirectory(TempDirectory);
+    PilotWatcher.SetExactChannelMatch(true);
+    PilotWatcher.SetIncludeSystemMessages(true);
+    PilotWatcher.SetChannel("Local");
+    PilotWatcher.SetListener("pilot two");
+    Check.Expect(PilotWatcher.FindCurrentSystem() == "New Caldari", "a chosen character reads only its own Local log, ignoring case");
+    PilotWatcher.SetListener("Pilot One");
+    Check.Expect(PilotWatcher.FindCurrentSystem() == "Perimeter", "switching the chosen character switches the system");
+    PilotWatcher.SetListener("Nobody");
+    Check.Expect(PilotWatcher.FindCurrentSystem().empty() == true, "a character with no Local log gives no system");
+    PilotWatcher.SetListener("");
+    Check.Expect(PilotWatcher.FindCurrentSystem() == "Perimeter", "no chosen character goes back to the newest across characters");
+
     WriteUtf16(TempDirectory / L"Local_20261008_100000_222.txt", L"\xFEFF" L"[ 2026.10.08 10:40:00 ] EVE System > Channel changed to Local : Jita\r\n", true);
     LocalWatcher.Poll();
     WriteUtf16(TempDirectory / L"Local_20261008_100000_222.txt", L"\xFEFF" L"[ 2026.10.08 10:50:00 ] EVE System > Channel changed to Local : New Caldari\r\n", true);

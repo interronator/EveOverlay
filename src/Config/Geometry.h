@@ -11,6 +11,14 @@ struct Point
     std::string ToString() const;
 };
 
+struct ScreenBounds
+{
+    int Left = 0;
+    int Top = 0;
+    int Right = 0;
+    int Bottom = 0;
+};
+
 struct Size
 {
     int Width = 0;

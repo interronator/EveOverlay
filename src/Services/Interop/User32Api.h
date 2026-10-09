@@ -15,6 +15,7 @@ public:
     static void Move(const HWND Window, const int Left, const int Top, const int Width, const int Height);
     static RECT GetWindowRectangle(const HWND Window);
     static RECT GetClientRectangle(const HWND Window);
+    static RECT GetWorkAreaNear(const POINT Location);
     static bool IsMaximized(const HWND Window);
     static bool IsMinimized(const HWND Window);
     static HDC AcquireDeviceContext(const HWND Window);

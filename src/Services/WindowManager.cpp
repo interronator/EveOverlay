@@ -62,6 +62,11 @@ void WindowManager::MaximizeWindow(const HWND Window) const
     User32Api::ShowAsync(Window, SW_SHOWMAXIMIZED);
 }
 
+RECT WindowManager::GetWorkArea(const POINT Location) const
+{
+    return User32Api::GetWorkAreaNear(Location);
+}
+
 RECT WindowManager::GetWindowPosition(const HWND Window) const
 {
     return User32Api::GetWindowRectangle(Window);

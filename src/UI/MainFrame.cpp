@@ -86,6 +86,28 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
     {
         ApplyWindowOnTop();
         ApplyTheme();
+        Universe.SetMainCharacter(Configuration.MainCharacter);
+        Universe.SetCharacters(Configuration.GetSelectableCharacters());
+    });
+
+    Presenter.CharactersChanged.Connect([this](const std::vector<std::string>& Characters)
+    {
+        General.SetCharacters(Characters);
+        General.SetMainCharacter(Configuration.MainCharacter);
+        Organizer.SetCharacters(Characters);
+        Universe.SetCharacters(Characters);
+        Universe.SetMainCharacter(Configuration.MainCharacter);
+        Universe.SetLocationCharacter(Configuration.UniverseLocationCharacter);
+    });
+
+    General.CharacterRemoved.Connect([this](const std::string& Name)
+    {
+        RemoveCharacter(Name);
+    });
+
+    Universe.CharacterRemoved.Connect([this](const std::string& Name)
+    {
+        RemoveCharacter(Name);
     });
 
     Presenter.ClientsOpenChanged.Connect([this](const bool IsOpen)
@@ -207,6 +229,14 @@ COLORREF MainFrame::ToColorRef(const ImVec4& Source)
     return RGB(static_cast<int>(Source.x * 255.0f + 0.5f), static_cast<int>(Source.y * 255.0f + 0.5f), static_cast<int>(Source.z * 255.0f + 0.5f));
 }
 
+void MainFrame::RemoveCharacter(const std::string& Name)
+{
+    if (Presenter.ForgetCharacter(Name) == true)
+    {
+        ApplyUniverseSettings();
+    }
+}
+
 void MainFrame::ApplyUniverseSettings()
 {
     UniverseMapOptions Options;
@@ -224,6 +254,7 @@ void MainFrame::ApplyUniverseSettings()
     Options.IgnoreClear = Configuration.UniverseIgnoreClear;
     Options.ScaleVolumeByDistance = Configuration.UniverseScaleVolumeByDistance;
     Options.FollowLocation = Configuration.UniverseFollowLocation;
+    Options.LocationCharacter = Configuration.UniverseLocationCharacter;
     Options.UseJumpBridges = Configuration.UniverseUseJumpBridges;
     Options.Keywords = Configuration.UniverseKeywords;
     Options.KeywordSoundPath = Configuration.UniverseKeywordSoundPath;

@@ -183,6 +183,7 @@ private:
     bool IgnoreClear = true;
     bool ScaleVolumeByDistance = true;
     bool FollowLocation = false;
+    std::string LocationCharacter;
     bool FollowCheckPending = false;
     bool UseJumpBridges = true;
     bool BridgesApplied = false;

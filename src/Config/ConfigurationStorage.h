@@ -53,6 +53,8 @@ private:
 
     static bool TryReadInt(const Json& Value, int* const Result);
     static bool TryReadPoint(const Json& Value, Point* const Result);
+    static Json BuildStringList(const std::vector<std::string>& Source);
+    static void LoadStringList(const Json& Value, std::vector<std::string>& Target);
     static Json BuildIdentifierMap(const std::map<long long, std::string>& Source);
     static void LoadIdentifierMap(const Json& Value, std::map<long long, std::string>& Target);
 

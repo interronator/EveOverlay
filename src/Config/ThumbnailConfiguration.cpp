@@ -2,6 +2,142 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
+
+#include "Config/TextUtil.h"
+
+std::string ThumbnailConfiguration::GetCharacterName(const std::wstring& ClientTitle)
+{
+    constexpr const wchar_t* PREFIX = L"EVE - ";
+    const size_t PrefixLength = std::char_traits<wchar_t>::length(PREFIX);
+    if (ClientTitle.size() <= PrefixLength || ClientTitle.compare(0, PrefixLength, PREFIX) != 0)
+    {
+        return std::string();
+    }
+
+    return TextUtil::Trim(TextUtil::ToUtf8(ClientTitle.substr(PrefixLength)));
+}
+
+bool ThumbnailConfiguration::RememberCharacter(const std::wstring& ClientTitle)
+{
+    const std::string Name = GetCharacterName(ClientTitle);
+    if (Name.empty() == true)
+    {
+        return false;
+    }
+
+    RemoveName(HiddenCharacters, Name);
+
+    for (const std::string& Known : KnownCharacters)
+    {
+        if (TextUtil::EqualsIgnoreCase(Known, Name) == true)
+        {
+            return false;
+        }
+    }
+
+    KnownCharacters.push_back(Name);
+    return true;
+}
+
+void ThumbnailConfiguration::RemoveName(std::vector<std::string>& Names, const std::string& Name)
+{
+    Names.erase(std::remove_if(Names.begin(), Names.end(), [&Name](const std::string& Existing)
+    {
+        return TextUtil::EqualsIgnoreCase(Existing, Name) == true;
+    }), Names.end());
+}
+
+bool ThumbnailConfiguration::IsCharacterHidden(const std::string& Name) const
+{
+    for (const std::string& Hidden : HiddenCharacters)
+    {
+        if (TextUtil::EqualsIgnoreCase(Hidden, Name) == true)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ThumbnailConfiguration::ForgetCharacter(const std::string& Name)
+{
+    const std::string Trimmed = TextUtil::Trim(Name);
+    if (Trimmed.empty() == true)
+    {
+        return false;
+    }
+
+    RemoveName(KnownCharacters, Trimmed);
+
+    if (IsCharacterHidden(Trimmed) == false)
+    {
+        HiddenCharacters.push_back(Trimmed);
+    }
+
+    bool SelectionCleared = false;
+    if (TextUtil::EqualsIgnoreCase(MainCharacter, Trimmed) == true)
+    {
+        MainCharacter.clear();
+        SelectionCleared = true;
+    }
+
+    if (TextUtil::EqualsIgnoreCase(UniverseLocationCharacter, Trimmed) == true)
+    {
+        UniverseLocationCharacter.clear();
+        SelectionCleared = true;
+    }
+
+    return SelectionCleared;
+}
+
+std::vector<std::string> ThumbnailConfiguration::GetSelectableCharacters() const
+{
+    std::vector<std::string> Candidates;
+    for (const std::string& Known : KnownCharacters)
+    {
+        Candidates.push_back(Known);
+    }
+
+    for (const std::pair<const long long, std::string>& Entry : CharacterNames)
+    {
+        Candidates.push_back(Entry.second);
+    }
+
+    for (const std::pair<const std::wstring, std::string>& Entry : ClientHotkeys)
+    {
+        Candidates.push_back(GetCharacterName(Entry.first));
+    }
+
+    Candidates.erase(std::remove_if(Candidates.begin(), Candidates.end(), [this](const std::string& Candidate)
+    {
+        return IsCharacterHidden(Candidate) == true;
+    }), Candidates.end());
+
+    Candidates.push_back(MainCharacter);
+    Candidates.push_back(UniverseLocationCharacter);
+
+    std::vector<std::string> Characters;
+    std::set<std::string> Seen;
+    for (const std::string& Candidate : Candidates)
+    {
+        const std::string Name = TextUtil::Trim(Candidate);
+        if (Name.empty() == true || Seen.insert(TextUtil::ToLower(Name)).second == false)
+        {
+            continue;
+        }
+
+        Characters.push_back(Name);
+    }
+
+    std::sort(Characters.begin(), Characters.end(), [](const std::string& Left, const std::string& Right)
+    {
+        return TextUtil::CompareIgnoreCase(Left, Right) < 0;
+    });
+
+    return Characters;
+}
 
 bool ThumbnailConfiguration::IsClientLayoutTrackingEnabled() const
 {

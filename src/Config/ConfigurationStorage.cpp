@@ -23,6 +23,7 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
     {"MoveAllThumbnails", &ThumbnailConfiguration::MoveAllThumbnails},
     {"LockThumbnails", &ThumbnailConfiguration::LockThumbnails},
     {"ThumbnailOrganizerEnabled", &ThumbnailConfiguration::OrganizerEnabled},
+    {"OrganizerSmartStart", &ThumbnailConfiguration::OrganizerSmartStart},
     {"EnableThumbnailZoom", &ThumbnailConfiguration::ThumbnailZoomEnabled},
     {"ShowThumbnailOverlays", &ThumbnailConfiguration::ShowThumbnailOverlays},
     {"ShowThumbnailFrames", &ThumbnailConfiguration::ShowThumbnailFrames},
@@ -47,6 +48,8 @@ const ConfigurationStorage::BoolProperty ConfigurationStorage::BOOL_PROPERTIES[]
 };
 
 const ConfigurationStorage::StringProperty ConfigurationStorage::STRING_PROPERTIES[] = {
+    {"MainCharacter", &ThumbnailConfiguration::MainCharacter},
+    {"UniverseLocationCharacter", &ThumbnailConfiguration::UniverseLocationCharacter},
     {"UniverseSystem", &ThumbnailConfiguration::UniverseSystem},
     {"UniverseIntelChannel", &ThumbnailConfiguration::UniverseIntelChannel},
     {"UniverseAlertSoundPath", &ThumbnailConfiguration::UniverseAlertSoundPath},
@@ -305,6 +308,10 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
 
     Root["UniverseSavedChannels"] = SavedChannels;
 
+    Root["KnownCharacters"] = BuildStringList(Configuration.KnownCharacters);
+    Root["HiddenCharacters"] = BuildStringList(Configuration.HiddenCharacters);
+    Root["OrganizerSlots"] = BuildStringList(Configuration.OrganizerSlots);
+
     Json CycleGroups = Json::array();
     for (const CycleGroup& Group : Configuration.CycleGroups)
     {
@@ -335,6 +342,7 @@ ConfigurationStorage::Json ConfigurationStorage::BuildJson() const
         Entry["PartialRowFirst"] = Preset.Arrangement.Shape.PartialRowFirst;
         Entry["Gap"] = Preset.Arrangement.Gap;
         Entry["Origin"] = Preset.Arrangement.Origin.ToString();
+        Entry["Slots"] = BuildStringList(Preset.Arrangement.SlotCharacters);
         LayoutPresets.push_back(Entry);
     }
 
@@ -540,6 +548,24 @@ void ConfigurationStorage::ApplyProperty(const std::string& Key, const Json& Val
         return;
     }
 
+    if (Key == "KnownCharacters")
+    {
+        LoadStringList(Value, Configuration.KnownCharacters);
+        return;
+    }
+
+    if (Key == "HiddenCharacters")
+    {
+        LoadStringList(Value, Configuration.HiddenCharacters);
+        return;
+    }
+
+    if (Key == "OrganizerSlots")
+    {
+        LoadStringList(Value, Configuration.OrganizerSlots);
+        return;
+    }
+
     if (Key == "PriorityClients")
     {
         LoadPriorityClients(Value);
@@ -626,6 +652,7 @@ void ConfigurationStorage::LoadLayoutPresets(const Json& Value)
 
         const Json PartialFirst = Entry.value("PartialRowFirst", Json());
         Preset.Arrangement.Shape.PartialRowFirst = PartialFirst.is_boolean() == true && PartialFirst.get<bool>();
+        LoadStringList(Entry.value("Slots", Json()), Preset.Arrangement.SlotCharacters);
         Configuration.LayoutPresets.push_back(Preset);
     }
 }
@@ -788,6 +815,34 @@ void ConfigurationStorage::LoadSavedChannels(const Json& Value)
         if (Channel.is_string() == true)
         {
             Configuration.UniverseSavedChannels.push_back(Channel.get<std::string>());
+        }
+    }
+}
+
+ConfigurationStorage::Json ConfigurationStorage::BuildStringList(const std::vector<std::string>& Source)
+{
+    Json List = Json::array();
+    for (const std::string& Entry : Source)
+    {
+        List.push_back(Entry);
+    }
+
+    return List;
+}
+
+void ConfigurationStorage::LoadStringList(const Json& Value, std::vector<std::string>& Target)
+{
+    Target.clear();
+    if (Value.is_array() == false)
+    {
+        return;
+    }
+
+    for (const Json& Entry : Value)
+    {
+        if (Entry.is_string() == true)
+        {
+            Target.push_back(Entry.get<std::string>());
         }
     }
 }

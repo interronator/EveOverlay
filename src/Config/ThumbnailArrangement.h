@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,12 @@ struct ThumbnailArrangement
     GridShape Shape;
     int Gap = 0;
     Point Origin;
+
+    // Which character goes in each slot, in reading order; an empty name leaves the slot to whoever is closest
+    std::vector<std::string> SlotCharacters;
+
+    // Starts the grid where most of the previews already sit instead of at Origin
+    bool SmartStart = false;
 };
 
 struct LayoutPreset
@@ -53,4 +60,17 @@ public:
 
     // For each current thumbnail location, the index of the slot it should take; slots and thumbnails are paired closest first
     static std::vector<size_t> AssignSlots(const std::vector<Point>& Current, const std::vector<Point>& Slots);
+
+    // Like the above, but a thumbnail whose character is named for a slot takes that slot first; Characters has one name per thumbnail.
+    // A slot named for a character that has no thumbnail is left to the others.
+    static std::vector<size_t> AssignSlots(const std::vector<Point>& Current, const std::vector<Point>& Slots, const std::vector<std::string>& Characters, const std::vector<std::string>& SlotCharacters);
+
+    // The thumbnails that sit close together and make up more than half of all of them; empty when no group is a majority
+    static std::vector<size_t> FindMajorityGroup(const std::vector<Point>& Locations, const Size ThumbnailSize, const int Gap);
+
+    // Where a grid should start so it takes the place of the majority group: the group's top-left corner; nothing when there is no majority
+    static std::optional<Point> DeriveOrigin(const std::vector<Point>& Locations, const Size ThumbnailSize, const int Gap);
+
+    // Moves the origin so a grid of Count thumbnails fits inside the area, as far as it can
+    static Point FitToArea(const Point Origin, const ThumbnailArrangement& Arrangement, const Size ThumbnailSize, const size_t Count, const ScreenBounds& Area);
 };

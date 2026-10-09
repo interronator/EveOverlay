@@ -21,6 +21,7 @@ public:
     Signal<> ThumbnailSizeChanged;
     Signal<bool> ClientsOpenChanged;
     Signal<> HotkeysChanged;
+    Signal<const std::vector<std::string>&> CharactersChanged;
     Signal<const ThumbnailArrangement&> ArrangeRequested;
 
     SettingsPresenter(ThumbnailConfiguration& ConfigurationReference, ConfigurationStorage& StorageReference,
@@ -29,6 +30,9 @@ public:
     void LoadSettings();
     void AddThumbnails(const std::vector<std::wstring>& Titles);
     void RemoveThumbnails(const std::vector<std::wstring>& Titles);
+
+    // Takes a character off the lists and saves; true when the main or Local character was the one removed and had to be cleared
+    bool ForgetCharacter(const std::string& Name);
 
     // A resize reaches here once per size message while dragging, so the config is only updated; it is written by the next save
     void UpdateThumbnailSize(const Size NewSize);

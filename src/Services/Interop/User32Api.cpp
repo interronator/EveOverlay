@@ -48,6 +48,18 @@ RECT User32Api::GetWindowRectangle(const HWND Window)
     return Rectangle;
 }
 
+RECT User32Api::GetWorkAreaNear(const POINT Location)
+{
+    MONITORINFO Info = {};
+    Info.cbSize = sizeof(Info);
+    if (::GetMonitorInfoW(::MonitorFromPoint(Location, MONITOR_DEFAULTTONEAREST), &Info) == FALSE)
+    {
+        return RECT{};
+    }
+
+    return Info.rcWork;
+}
+
 RECT User32Api::GetClientRectangle(const HWND Window)
 {
     RECT Rectangle = {};

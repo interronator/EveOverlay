@@ -105,6 +105,40 @@ void TestArranger(Checker& Check)
     const std::vector<size_t> Assigned = ThumbnailArranger::AssignSlots({Point{500, 0}, Point{0, 0}, Point{250, 0}}, {Point{0, 0}, Point{250, 0}, Point{500, 0}});
     Check.Expect(Assigned[0] == 2 && Assigned[1] == 0 && Assigned[2] == 1, "thumbnails take the slot nearest to where they were");
 
+    const Size Thumb{100, 50};
+    const std::vector<Point> Clustered{Point{1000, 500}, Point{1100, 500}, Point{1000, 550}, Point{1100, 550}, Point{0, 0}};
+    const std::vector<size_t> Group = ThumbnailArranger::FindMajorityGroup(Clustered, Thumb, 0);
+    Check.Expect(Group == std::vector<size_t>{0, 1, 2, 3}, "four of five previews side by side are the majority group");
+    const std::optional<Point> Derived = ThumbnailArranger::DeriveOrigin(Clustered, Thumb, 0);
+    Check.Expect(Derived.has_value() == true && Derived->X == 1000 && Derived->Y == 500, "the new grid starts at the group's top-left corner");
+    Check.Expect(ThumbnailArranger::DeriveOrigin({Point{0, 0}, Point{1000, 0}, Point{2000, 0}, Point{3000, 0}}, Thumb, 0).has_value() == false, "scattered previews have no majority group");
+    Check.Expect(ThumbnailArranger::DeriveOrigin({Point{0, 0}, Point{100, 0}, Point{2000, 0}, Point{2100, 0}}, Thumb, 0).has_value() == false, "exactly half is not a majority");
+    const std::optional<Point> Single = ThumbnailArranger::DeriveOrigin({Point{300, 200}}, Thumb, 0);
+    Check.Expect(Single.has_value() == true && Single->X == 300 && Single->Y == 200, "a single preview is its own group");
+    Check.Expect(ThumbnailArranger::FindMajorityGroup({Point{0, 0}, Point{120, 0}, Point{240, 0}}, Thumb, 20).size() == 3, "previews spaced by a gap still form one group");
+    Check.Expect(ThumbnailArranger::FindMajorityGroup({}, Thumb, 0).empty() == true, "no previews have no group");
+
+    const ThumbnailArrangement Square{GridShape{2, 2}, 0, Point{0, 0}};
+    const Point FitRight = ThumbnailArranger::FitToArea(Point{950, 0}, Square, Thumb, 4, ScreenBounds{0, 0, 1000, 1000});
+    Check.Expect(FitRight.X == 800 && FitRight.Y == 0, "a grid hanging off the right edge is pulled back on screen");
+    const Point FitTopLeft = ThumbnailArranger::FitToArea(Point{-50, -20}, Square, Thumb, 4, ScreenBounds{0, 0, 1000, 1000});
+    Check.Expect(FitTopLeft.X == 0 && FitTopLeft.Y == 0, "a grid off the top-left is pushed back on screen");
+    const Point FitInside = ThumbnailArranger::FitToArea(Point{300, 300}, Square, Thumb, 4, ScreenBounds{0, 0, 1000, 1000});
+    Check.Expect(FitInside.X == 300 && FitInside.Y == 300, "a grid that already fits is left alone");
+    Check.Expect(ThumbnailArranger::FitToArea(Point{0, 0}, Square, Thumb, 4, ScreenBounds{0, 0, 100, 100}).X == 0, "a grid bigger than the screen lines up with the left edge");
+
+    const std::vector<Point> SlotPoints{Point{0, 0}, Point{250, 0}, Point{500, 0}};
+    const std::vector<Point> Now{Point{500, 0}, Point{0, 0}, Point{250, 0}};
+    const std::vector<std::string> Names{"Alpha", "Bravo", "Charlie"};
+    const std::vector<size_t> Named = ThumbnailArranger::AssignSlots(Now, SlotPoints, Names, {"charlie", "", "Alpha"});
+    Check.Expect(Named[2] == 0 && Named[0] == 2 && Named[1] == 1, "named characters take their spot, the rest take what is left");
+    const std::vector<size_t> Unknown = ThumbnailArranger::AssignSlots(Now, SlotPoints, Names, {"Zed", "", ""});
+    Check.Expect(Unknown[0] == 2 && Unknown[1] == 0 && Unknown[2] == 1, "a spot named for a character with no client is left to the nearest");
+    const std::vector<size_t> Doubled = ThumbnailArranger::AssignSlots(Now, SlotPoints, Names, {"Alpha", "Alpha", ""});
+    Check.Expect(Doubled[0] == 0 && Doubled[1] != Doubled[2] && Doubled[1] != 0 && Doubled[2] != 0, "a character named twice takes the first spot only");
+    const std::vector<size_t> NoNames = ThumbnailArranger::AssignSlots(Now, SlotPoints, {}, {});
+    Check.Expect(NoNames[0] == 2 && NoNames[1] == 0 && NoNames[2] == 1, "no names behaves like the plain closest-first assignment");
+
     const ThumbnailArrangement OnTop{GridShape{2, 2, true}, 0, Point{0, 0}};
     const std::vector<Point> TopLocations = ThumbnailArranger::GetLocations(OnTop, Size{100, 50}, 3);
     Check.Expect(TopLocations[0].X == 50 && TopLocations[0].Y == 0, "top variant puts the odd thumbnail centred on the first row");

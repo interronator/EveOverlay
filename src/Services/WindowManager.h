@@ -16,6 +16,7 @@ public:
     void MinimizeWindow(const HWND Window, const bool EnableAnimation) const override;
     void MoveWindow(const HWND Window, const int Left, const int Top, const int Width, const int Height) const override;
     void MaximizeWindow(const HWND Window) const override;
+    RECT GetWorkArea(const POINT Location) const override;
     RECT GetWindowPosition(const HWND Window) const override;
     bool IsWindowMaximized(const HWND Window) const override;
     bool IsWindowMinimized(const HWND Window) const override;

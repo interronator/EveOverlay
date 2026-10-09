@@ -50,10 +50,19 @@ void SettingsPresenter::LoadSettings()
 
 void SettingsPresenter::AddThumbnails(const std::vector<std::wstring>& Titles)
 {
+    bool CharacterAdded = false;
     for (const std::wstring& Title : Titles)
     {
         ClientsPage.AddThumbnail(Title, Configuration.IsThumbnailDisabled(Title));
         HotkeysPage.AddClient(Title);
+        OrganizerPage.AddOpenClient(Title);
+        CharacterAdded = Configuration.RememberCharacter(Title) == true || CharacterAdded == true;
+    }
+
+    if (CharacterAdded == true)
+    {
+        CharactersChanged.Emit(Configuration.GetSelectableCharacters());
+        Storage.Save();
     }
 
     OpenClients.insert(Titles.begin(), Titles.end());
@@ -67,6 +76,7 @@ void SettingsPresenter::RemoveThumbnails(const std::vector<std::wstring>& Titles
     {
         ClientsPage.RemoveThumbnail(Title);
         HotkeysPage.RemoveClient(Title);
+        OrganizerPage.RemoveOpenClient(Title);
     }
 
     for (const std::wstring& Title : Titles)
@@ -76,6 +86,14 @@ void SettingsPresenter::RemoveThumbnails(const std::vector<std::wstring>& Titles
 
     NotifyClientsOpen();
     OrganizerPage.SetDetectedCount(ClientsPage.GetEnabledThumbnailCount());
+}
+
+bool SettingsPresenter::ForgetCharacter(const std::string& Name)
+{
+    const bool SelectionCleared = Configuration.ForgetCharacter(Name);
+    Storage.Save();
+    CharactersChanged.Emit(Configuration.GetSelectableCharacters());
+    return SelectionCleared;
 }
 
 void SettingsPresenter::UpdateThumbnailSize(const Size NewSize)

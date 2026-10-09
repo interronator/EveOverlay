@@ -25,6 +25,9 @@ public:
     bool MainWindowAlwaysOnTop = false;
     bool LightTheme = false;
     bool ShowDevelopingTabs = false;
+    std::string MainCharacter;
+    std::vector<std::string> KnownCharacters;
+    std::vector<std::string> HiddenCharacters;
     int ThumbnailRefreshPeriod = 500;
 
     bool EnableCompatibilityMode = false;
@@ -46,6 +49,8 @@ public:
     bool MoveAllThumbnails = false;
     bool LockThumbnails = false;
     bool OrganizerEnabled = true;
+    bool OrganizerSmartStart = true;
+    std::vector<std::string> OrganizerSlots;
 
     bool ThumbnailZoomEnabled = false;
     int ThumbnailZoomFactor = 2;
@@ -76,6 +81,7 @@ public:
     bool UniverseIgnoreClear = true;
     bool UniverseScaleVolumeByDistance = true;
     bool UniverseFollowLocation = false;
+    std::string UniverseLocationCharacter;
     bool UniverseUseJumpBridges = true;
     std::string UniverseKeywords;
     std::string UniverseKeywordSoundPath;
@@ -111,6 +117,21 @@ public:
     std::map<long long, std::string> CharacterNames;
     std::map<long long, std::string> AccountNicknames;
 
+    // The character name in an "EVE - Name" window title; empty for a client still on the login screen
+    static std::string GetCharacterName(const std::wstring& ClientTitle);
+
+    // Remembers the character behind a client window title so it stays selectable after the client closes; true when it was new
+    bool RememberCharacter(const std::wstring& ClientTitle);
+
+    // Takes a character off the list. It stays off until its client is opened again; a main or Local character that was removed is cleared.
+    // True when one of those selections was cleared.
+    bool ForgetCharacter(const std::string& Name);
+
+    bool IsCharacterHidden(const std::string& Name) const;
+
+    // Every character the app has seen (open clients, saved hotkeys, synced accounts and the current main character), in name order
+    std::vector<std::string> GetSelectableCharacters() const;
+
     bool IsClientLayoutTrackingEnabled() const;
     void SetClientLayoutTrackingEnabled(const bool Enabled);
     bool IsPerClientThumbnailLayoutsEnabled() const;
@@ -140,6 +161,8 @@ public:
     void ApplyRestrictions();
 
 private:
+    static void RemoveName(std::vector<std::string>& Names, const std::string& Name);
+
     // A value equal to either bound maps to that bound
     static int Restrict(const int Value, const int Minimum, const int Maximum);
 

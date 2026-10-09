@@ -1,7 +1,9 @@
 #include "UI/OrganizerTab.h"
 
 #include <algorithm>
+#include <set>
 
+#include "Config/TextUtil.h"
 #include "UI/Theme.h"
 
 const std::string& OrganizerTab::GetTitle() const
@@ -45,6 +47,10 @@ void OrganizerTab::Draw()
     DrawShapeCards(Count);
 
     ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+    Widgets::SectionLabel("WHO GOES WHERE");
+    DrawSlotCard(Count);
+
+    ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
     Widgets::SectionLabel("PLACEMENT");
     DrawPlacementCard();
 
@@ -60,12 +66,17 @@ void OrganizerTab::LoadFromConfiguration(const ThumbnailConfiguration& Configura
     Enabled = Configuration.OrganizerEnabled;
     MoveAll = Configuration.MoveAllThumbnails;
     Presets = Configuration.LayoutPresets;
+    SmartStart = Configuration.OrganizerSmartStart;
+    SlotCharacters = Configuration.OrganizerSlots;
+    Characters = Configuration.GetSelectableCharacters();
 }
 
 void OrganizerTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
 {
     Configuration.OrganizerEnabled = Enabled;
     Configuration.LayoutPresets = Presets;
+    Configuration.OrganizerSmartStart = SmartStart;
+    Configuration.OrganizerSlots = SlotCharacters;
 }
 
 void OrganizerTab::SetMoveAll(const bool NewValue)
@@ -76,6 +87,28 @@ void OrganizerTab::SetMoveAll(const bool NewValue)
 void OrganizerTab::SetDetectedCount(const int Count)
 {
     DetectedCount = Count;
+}
+
+void OrganizerTab::SetCharacters(const std::vector<std::string>& NewCharacters)
+{
+    Characters = NewCharacters;
+}
+
+void OrganizerTab::AddOpenClient(const std::wstring& ClientTitle)
+{
+    const std::string Name = ThumbnailConfiguration::GetCharacterName(ClientTitle);
+    if (Name.empty() == true || std::find(OpenCharacters.begin(), OpenCharacters.end(), Name) != OpenCharacters.end())
+    {
+        return;
+    }
+
+    OpenCharacters.push_back(Name);
+}
+
+void OrganizerTab::RemoveOpenClient(const std::wstring& ClientTitle)
+{
+    const std::string Name = ThumbnailConfiguration::GetCharacterName(ClientTitle);
+    OpenCharacters.erase(std::remove(OpenCharacters.begin(), OpenCharacters.end(), Name), OpenCharacters.end());
 }
 
 int OrganizerTab::GetClientCount() const
@@ -146,9 +179,174 @@ void OrganizerTab::DrawShapeCards(const int Count)
     }
 }
 
+void OrganizerTab::DrawSlotCard(const int Count)
+{
+    if (SlotCharacters.size() < static_cast<size_t>(Count))
+    {
+        SlotCharacters.resize(static_cast<size_t>(Count));
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_Text, Theme::TEXT_DISABLED);
+    ImGui::TextWrapped("Pick which character takes each spot. Spots left on Auto go to whichever client is closest. Press Apply layout to use it.");
+    ImGui::PopStyleColor();
+
+    const float Spacing = Theme::Px(SLOT_SPACING);
+    const int Columns = std::max(1, SelectedShape.Columns);
+    const float CellWidth = std::clamp((ImGui::GetContentRegionAvail().x - Spacing * static_cast<float>(Columns - 1)) / static_cast<float>(Columns), Theme::Px(SLOT_MINIMUM_WIDTH), Theme::Px(SLOT_MAXIMUM_WIDTH));
+    const float CellHeight = ImGui::GetFrameHeight() * 1.5f;
+    const ImVec2 GridStart = ImGui::GetCursorPos();
+
+    int LastRow = 0;
+    for (int Index = 0; Index < Count; Index++)
+    {
+        const ThumbnailArranger::CellPosition Position = ThumbnailArranger::GetCellPosition(Index, SelectedShape, Count);
+        LastRow = std::max(LastRow, Position.Row);
+        ImGui::SetCursorPos(ImVec2(GridStart.x + Position.Column * (CellWidth + Spacing), GridStart.y + static_cast<float>(Position.Row) * (CellHeight + Spacing)));
+
+        const std::string& Assigned = SlotCharacters[static_cast<size_t>(Index)];
+        ImGui::PushID(Index);
+        if (Assigned.empty() == true)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TEXT_DISABLED);
+        }
+
+        const std::string Label = std::to_string(Index + 1) + "  " + (Assigned.empty() == true ? "Auto" : Assigned) + "##Slot";
+        const bool Pressed = ImGui::Button(Label.c_str(), ImVec2(CellWidth, CellHeight));
+        if (Assigned.empty() == true)
+        {
+            ImGui::PopStyleColor();
+        }
+
+        Widgets::HoverTip("Choose who goes in this spot. Spots are numbered left to right, top to bottom.");
+        if (Pressed == true)
+        {
+            ImGui::OpenPopup("##SlotChoices");
+        }
+
+        DrawSlotChoices(static_cast<size_t>(Index));
+        ImGui::PopID();
+    }
+
+    ImGui::SetCursorPos(ImVec2(GridStart.x, GridStart.y + static_cast<float>(LastRow + 1) * (CellHeight + Spacing)));
+    ImGui::Dummy(ImVec2(0.0f, 0.0f));
+
+    if (ImGui::Button("Reset all to Auto") == true)
+    {
+        SlotCharacters.assign(SlotCharacters.size(), std::string());
+        SettingsChanged.Emit();
+    }
+}
+
+size_t OrganizerTab::FindSlotOf(const std::string& Name, const size_t IgnoredSlot) const
+{
+    for (size_t Slot = 0; Slot < SlotCharacters.size(); Slot++)
+    {
+        if (Slot != IgnoredSlot && TextUtil::EqualsIgnoreCase(SlotCharacters[Slot], Name) == true)
+        {
+            return Slot;
+        }
+    }
+
+    return SlotCharacters.size();
+}
+
+std::vector<std::string> OrganizerTab::GetSlotOptions(const size_t Slot) const
+{
+    if (ShowAllCharacters == true)
+    {
+        return Characters;
+    }
+
+    std::vector<std::string> Options = OpenCharacters;
+    const std::string& Holder = SlotCharacters[Slot];
+    const bool HolderListed = std::find_if(Options.begin(), Options.end(), [&Holder](const std::string& Option)
+    {
+        return TextUtil::EqualsIgnoreCase(Option, Holder) == true;
+    }) != Options.end();
+    if (Holder.empty() == false && HolderListed == false)
+    {
+        Options.push_back(Holder);
+    }
+
+    std::sort(Options.begin(), Options.end(), [](const std::string& Left, const std::string& Right)
+    {
+        return TextUtil::CompareIgnoreCase(Left, Right) < 0;
+    });
+
+    return Options;
+}
+
+void OrganizerTab::DrawSlotChoices(const size_t Slot)
+{
+    if (ImGui::BeginPopup("##SlotChoices") == false)
+    {
+        return;
+    }
+
+    ImGui::TextDisabled("Spot %d", static_cast<int>(Slot + 1));
+    ImGui::Checkbox("Show all characters", &ShowAllCharacters);
+    Widgets::HoverTip("Off: only characters with an open client. On: every character the app knows, so you can plan a layout ahead.");
+    ImGui::Separator();
+
+    if (Widgets::DropdownOption("Auto", SlotCharacters[Slot].empty() == true) == true)
+    {
+        AssignSlot(Slot, std::string());
+        ImGui::CloseCurrentPopup();
+    }
+
+    const std::vector<std::string> Options = GetSlotOptions(Slot);
+    if (Options.empty() == true)
+    {
+        ImGui::TextDisabled("No clients are open. Tick Show all characters to plan ahead.");
+    }
+
+    for (const std::string& Character : Options)
+    {
+        std::string Label = Character;
+        const size_t HeldBy = FindSlotOf(Character, Slot);
+        if (HeldBy < SlotCharacters.size())
+        {
+            Label += "  (spot " + std::to_string(HeldBy + 1) + ")";
+        }
+
+        ImGui::PushID(Character.c_str());
+        if (Widgets::DropdownOption(Label.c_str(), TextUtil::EqualsIgnoreCase(SlotCharacters[Slot], Character) == true) == true)
+        {
+            AssignSlot(Slot, Character);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::EndPopup();
+}
+
+// A character can only be in one spot, so picking one that is already placed swaps the two
+void OrganizerTab::AssignSlot(const size_t Slot, const std::string& Name)
+{
+    if (Name.empty() == false)
+    {
+        const size_t HeldBy = FindSlotOf(Name, Slot);
+        if (HeldBy < SlotCharacters.size())
+        {
+            SlotCharacters[HeldBy] = SlotCharacters[Slot];
+        }
+    }
+
+    SlotCharacters[Slot] = Name;
+    SettingsChanged.Emit();
+}
+
 void OrganizerTab::DrawPlacementCard()
 {
     Widgets::BeginCard("##Placement");
+    if (Widgets::ToggleRow("Start where my previews are", SmartStart) == true)
+    {
+        SettingsChanged.Emit();
+    }
+
+    Widgets::RowDivider();
     Widgets::NumberRow("Spacing between previews", GapField, Gap, 0, MAXIMUM_GAP, 2);
     Widgets::RowDivider();
     Widgets::NumberRow("Start X", OriginXField, OriginX, MINIMUM_COORDINATE, MAXIMUM_COORDINATE, 10);
@@ -170,7 +368,7 @@ void OrganizerTab::DrawApplyButton()
 
     if (Pressed == true)
     {
-        ArrangeRequested.Emit(ThumbnailArrangement{SelectedShape, Gap, Point{OriginX, OriginY}});
+        ArrangeRequested.Emit(ThumbnailArrangement{SelectedShape, Gap, Point{OriginX, OriginY}, SlotCharacters, SmartStart});
         LastApplied = "Applied " + std::to_string(SelectedShape.Columns) + " x " + std::to_string(SelectedShape.Rows) + " layout.";
     }
 
@@ -261,7 +459,7 @@ void OrganizerTab::SavePreset(const int Count)
     LayoutPreset NewPreset;
     NewPreset.Name = PresetName;
     NewPreset.ClientCount = std::clamp(Count, MINIMUM_CLIENTS, MAXIMUM_CLIENTS);
-    NewPreset.Arrangement = ThumbnailArrangement{SelectedShape, Gap, Point{OriginX, OriginY}};
+    NewPreset.Arrangement = ThumbnailArrangement{SelectedShape, Gap, Point{OriginX, OriginY}, SlotCharacters, false};
 
     bool Replaced = false;
     for (LayoutPreset& Existing : Presets)
@@ -295,6 +493,7 @@ void OrganizerTab::ApplyPreset(const size_t Index)
     Gap = Preset.Arrangement.Gap;
     OriginX = Preset.Arrangement.Origin.X;
     OriginY = Preset.Arrangement.Origin.Y;
+    SlotCharacters = Preset.Arrangement.SlotCharacters;
 
     ArrangeRequested.Emit(Preset.Arrangement);
     LastApplied = "Applied preset \"" + Preset.Name + "\".";

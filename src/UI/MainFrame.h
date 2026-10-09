@@ -80,6 +80,7 @@ private:
     void ApplyTheme();
 
     void ApplyUniverseSettings();
+    void RemoveCharacter(const std::string& Name);
     void ApplyTimerSettings();
     void ApplyDScanSettings();
 

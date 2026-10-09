@@ -82,7 +82,9 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Full.SetClientHotkey(L"Alpha", Hotkey::Parse("Control, F2"));
     Full.ToggleThumbnail(L"Beta", true);
     Full.ActiveClientHighlightColor = Color{255, 1, 2, 3};
-    Full.LayoutPresets.push_back(LayoutPreset{"Five wide", 5, ThumbnailArrangement{GridShape{5, 1, true}, 8, Point{-20, 30}}});
+    Full.LayoutPresets.push_back(LayoutPreset{"Five wide", 5, ThumbnailArrangement{GridShape{5, 1, true}, 8, Point{-20, 30}, {"Mierk", "", "Päilot"}}});
+    Full.OrganizerSmartStart = false;
+    Full.OrganizerSlots = {"Päilot", "", "Mierk"};
     Full.UniverseIgnoreClear = false;
     Full.UniverseScaleVolumeByDistance = false;
     Full.UniverseFollowLocation = true;
@@ -105,6 +107,11 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Everyone.Name = "All";
     Everyone.Next = Hotkey::Parse("F14");
     Full.CycleGroups.push_back(Everyone);
+    Full.MainCharacter = "Mierk";
+    Full.UniverseLocationCharacter = "Päilot";
+    Full.KnownCharacters = {"Mierk", "Päilot"};
+    Full.HiddenCharacters = {"Old Alt"};
+    Full.CharacterNames[1] = "Zed Alt";
     const std::string SignatureBefore = Full.GetHotkeySignature();
     ConfigurationStorage FullStorage(Full, Directory / L"full.json");
     FullStorage.Save();
@@ -122,6 +129,10 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Check.Expect(Reloaded.LayoutPresets.size() == 1 && Reloaded.LayoutPresets[0].Name == "Five wide" && Reloaded.LayoutPresets[0].ClientCount == 5, "reload preset identity");
     Check.Expect(Reloaded.LayoutPresets[0].Arrangement.Shape == GridShape{5, 1, true} && Reloaded.LayoutPresets[0].Arrangement.Gap == 8 && Reloaded.LayoutPresets[0].Arrangement.Origin.X == -20 && Reloaded.LayoutPresets[0].Arrangement.Shape.PartialRowFirst == true, "reload preset arrangement");
 
+    Check.Expect(Reloaded.LayoutPresets[0].Arrangement.SlotCharacters == std::vector<std::string>{"Mierk", "", "Päilot"} && Reloaded.LayoutPresets[0].Arrangement.SmartStart == false, "reload preset character slots");
+    Check.Expect(Reloaded.OrganizerSmartStart == false && Reloaded.OrganizerSlots == std::vector<std::string>{"Päilot", "", "Mierk"}, "reload organizer smart start and character slots");
+    Check.Expect(Defaults.OrganizerSmartStart == true && Defaults.OrganizerSlots.empty() == true, "smart start is on by default with no slots chosen");
+
     Check.Expect(Reloaded.UniverseIgnoreClear == false && Reloaded.UniverseScaleVolumeByDistance == false && Reloaded.UniverseFollowLocation == true, "reload intel switches");
     Check.Expect(Reloaded.UniverseKeywords == "bubble, camp" && Reloaded.UniverseKeywordSoundPath == "alarm.wav", "reload intel keywords");
     Check.Expect(Defaults.UniverseIgnoreClear == true && Defaults.UniverseFollowLocation == false && Defaults.AttackAlertsEnabled == false, "intel and attack alert defaults");
@@ -130,6 +141,31 @@ int wmain(const int ArgumentCount, wchar_t** const Arguments)
     Check.Expect(Reloaded.TogglePreviewsHotkey == "Control, F9" && Reloaded.MinimizeAllHotkey == "Alt, F10", "reload global hotkeys");
     Check.Expect(Reloaded.CycleGroups.size() == 2 && Reloaded.CycleGroups[0].Name == "Miners" && Reloaded.CycleGroups[0].Members.size() == 2 && Reloaded.CycleGroups[0].Members[1] == L"EVE - Second", "reload cycle group members");
     Check.Expect(Reloaded.CycleGroups[0].Next.VirtualKey == VK_F13 && Reloaded.CycleGroups[0].Previous.Shift == true && Reloaded.CycleGroups[1].Members.empty() == true, "reload cycle group hotkeys");
+    Check.Expect(Reloaded.MainCharacter == "Mierk" && Reloaded.KnownCharacters.size() == 2 && Reloaded.KnownCharacters[1] == "Päilot", "reload main character and known characters");
+    Check.Expect(Reloaded.UniverseLocationCharacter == "Päilot" && Defaults.UniverseLocationCharacter.empty() == true, "reload the character used for Local");
+    Check.Expect(Defaults.MainCharacter.empty() == true && Defaults.KnownCharacters.empty() == true, "no main character by default");
+    Check.Expect(ThumbnailConfiguration::GetCharacterName(L"EVE - Mierk") == "Mierk" && ThumbnailConfiguration::GetCharacterName(L"EVE").empty() == true, "character name from a client title");
+
+    ThumbnailConfiguration Remember;
+    Check.Expect(Remember.RememberCharacter(L"EVE") == false && Remember.KnownCharacters.empty() == true, "login screen client is not a character");
+    Check.Expect(Remember.RememberCharacter(L"EVE - Mierk") == true && Remember.RememberCharacter(L"EVE - mierk") == false, "a character is remembered once, ignoring case");
+    Remember.CharacterNames[2] = "alpha";
+    Remember.SetClientHotkey(L"EVE - Zulu", Hotkey::Parse("F3"));
+    Remember.MainCharacter = "Mierk";
+    const std::vector<std::string> Selectable = Remember.GetSelectableCharacters();
+    Check.Expect(Selectable.size() == 3 && Selectable[0] == "alpha" && Selectable[1] == "Mierk" && Selectable[2] == "Zulu", "selectable characters merge every source in name order");
+    Check.Expect(Reloaded.GetSelectableCharacters().size() == 3, "reloaded config offers its known and synced characters");
+    Check.Expect(Reloaded.HiddenCharacters.size() == 1 && Reloaded.HiddenCharacters[0] == "Old Alt" && Reloaded.IsCharacterHidden("old alt") == true, "reload removed characters");
+
+    ThumbnailConfiguration Forget;
+    Forget.KnownCharacters = {"Alpha", "Bravo"};
+    Forget.CharacterNames[1] = "Alpha";
+    Forget.MainCharacter = "Bravo";
+    Forget.UniverseLocationCharacter = "Bravo";
+    Check.Expect(Forget.ForgetCharacter("alpha") == false && Forget.GetSelectableCharacters() == std::vector<std::string>{"Bravo"}, "a removed character leaves the list even when a synced account has it");
+    Check.Expect(Forget.ForgetCharacter("Bravo") == true && Forget.MainCharacter.empty() == true && Forget.UniverseLocationCharacter.empty() == true && Forget.GetSelectableCharacters().empty() == true, "removing the chosen character clears the choice");
+    Check.Expect(Forget.RememberCharacter(L"EVE - Alpha") == true && Forget.IsCharacterHidden("Alpha") == false && Forget.GetSelectableCharacters() == std::vector<std::string>{"Alpha"}, "a removed character returns when its client opens again");
+    Check.Expect(Forget.HiddenCharacters.size() == 1 && Forget.HiddenCharacters[0] == "Bravo", "only the characters still removed stay hidden");
     Check.Expect(Reloaded.GetHotkeySignature() == SignatureBefore, "hotkey signature survives a save and load");
     Reloaded.CycleGroups[0].Next = Hotkey::Parse("F15");
     Check.Expect(Reloaded.GetHotkeySignature() != SignatureBefore, "hotkey signature notices a changed hotkey");

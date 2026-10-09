@@ -111,6 +111,9 @@ private:
     void UpdateThumbnailsList();
     std::unique_ptr<IThumbnailView> CreateView(const ProcessInfo& Process);
     void RefreshThumbnails();
+
+    // The arrangement with its origin moved to where most previews already are, when smart start is on and there is such a group
+    ThumbnailArrangement ApplySmartStart(const ThumbnailArrangement& Arrangement, const std::vector<Point>& CurrentLocations) const;
     void ApplyHighlight(IThumbnailView& View) const;
     void CycleClients(const size_t GroupIndex, const int Direction);
     void TogglePreviews();

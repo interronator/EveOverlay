@@ -182,15 +182,17 @@ void ThumbnailManager::ArrangeThumbnails(const ThumbnailArrangement& Arrangement
         Targets.push_back(View.get());
     }
 
-    const std::vector<Point> Slots = ThumbnailArranger::GetLocations(Arrangement, Configuration.ThumbnailSize, Targets.size());
-
     std::vector<Point> CurrentLocations;
+    std::vector<std::string> CharacterNames;
     for (const IThumbnailView* const Target : Targets)
     {
         CurrentLocations.push_back(Target->GetThumbnailLocation());
+        CharacterNames.push_back(ThumbnailConfiguration::GetCharacterName(Target->GetTitle()));
     }
 
-    const std::vector<size_t> SlotForTarget = ThumbnailArranger::AssignSlots(CurrentLocations, Slots);
+    const ThumbnailArrangement Placed = ApplySmartStart(Arrangement, CurrentLocations);
+    const std::vector<Point> Slots = ThumbnailArranger::GetLocations(Placed, Configuration.ThumbnailSize, Targets.size());
+    const std::vector<size_t> SlotForTarget = ThumbnailArranger::AssignSlots(CurrentLocations, Slots, CharacterNames, Placed.SlotCharacters);
 
     {
         const EventSuppression Suppression(IgnoreViewEvents);
@@ -205,6 +207,31 @@ void ThumbnailManager::ArrangeThumbnails(const ThumbnailArrangement& Arrangement
     }
 
     Storage.Save();
+}
+
+ThumbnailArrangement ThumbnailManager::ApplySmartStart(const ThumbnailArrangement& Arrangement, const std::vector<Point>& CurrentLocations) const
+{
+    if (Arrangement.SmartStart == false)
+    {
+        return Arrangement;
+    }
+
+    const std::optional<Point> GroupOrigin = ThumbnailArranger::DeriveOrigin(CurrentLocations, Configuration.ThumbnailSize, Arrangement.Gap);
+    if (GroupOrigin.has_value() == false)
+    {
+        return Arrangement;
+    }
+
+    ThumbnailArrangement Placed = Arrangement;
+    Placed.Origin = GroupOrigin.value();
+
+    const RECT WorkArea = WindowManagerInstance.GetWorkArea(POINT{Placed.Origin.X, Placed.Origin.Y});
+    if (WorkArea.right > WorkArea.left && WorkArea.bottom > WorkArea.top)
+    {
+        Placed.Origin = ThumbnailArranger::FitToArea(Placed.Origin, Placed, Configuration.ThumbnailSize, CurrentLocations.size(), ScreenBounds{WorkArea.left, WorkArea.top, WorkArea.right, WorkArea.bottom});
+    }
+
+    return Placed;
 }
 
 void ThumbnailManager::CloseAllViews()

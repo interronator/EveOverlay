@@ -11,6 +11,7 @@
 #include "Config/TextUtil.h"
 #include "Services/AlertSound.h"
 #include "Universe/ChatLogWatcher.h"
+#include "UI/CharacterPicker.h"
 #include "UI/Theme.h"
 
 const std::string& UniverseTab::GetTitle() const
@@ -67,7 +68,15 @@ void UniverseTab::Draw()
     Widgets::RowDivider();
     Changed = DrawSystemRow() == true || Changed == true;
     Widgets::RowDivider();
-    Changed = Widgets::ToggleRow("Follow my location (from Local chat)", FollowLocation) == true || Changed == true;
+    const bool WasFollowing = FollowLocation;
+    Changed = Widgets::ToggleRow("Use Character local", FollowLocation) == true || Changed == true;
+    if (FollowLocation == true && WasFollowing == false && LocationCharacter.empty() == true)
+    {
+        LocationCharacter = MainCharacter;
+    }
+
+    Widgets::RowDivider();
+    Changed = DrawLocationCharacterRow() == true || Changed == true;
     Widgets::RowDivider();
     Changed = Widgets::ToggleRow("Count jump bridges as one jump", UseJumpBridges) == true || Changed == true;
     Widgets::RowDivider();
@@ -179,6 +188,9 @@ void UniverseTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurat
     IgnoreClear = Configuration.UniverseIgnoreClear;
     ScaleVolume = Configuration.UniverseScaleVolumeByDistance;
     FollowLocation = Configuration.UniverseFollowLocation;
+    LocationCharacter = Configuration.UniverseLocationCharacter;
+    MainCharacter = Configuration.MainCharacter;
+    Characters = Configuration.GetSelectableCharacters();
     UseJumpBridges = Configuration.UniverseUseJumpBridges;
     CopyText(Keywords, sizeof(Keywords), Configuration.UniverseKeywords);
     KeywordSoundPath = Configuration.UniverseKeywordSoundPath;
@@ -202,9 +214,44 @@ void UniverseTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) co
     Configuration.UniverseIgnoreClear = IgnoreClear;
     Configuration.UniverseScaleVolumeByDistance = ScaleVolume;
     Configuration.UniverseFollowLocation = FollowLocation;
+    Configuration.UniverseLocationCharacter = LocationCharacter;
     Configuration.UniverseUseJumpBridges = UseJumpBridges;
     Configuration.UniverseKeywords = TextUtil::Trim(Keywords);
     Configuration.UniverseKeywordSoundPath = KeywordSoundPath;
+}
+
+void UniverseTab::SetCharacters(const std::vector<std::string>& NewCharacters)
+{
+    Characters = NewCharacters;
+}
+
+void UniverseTab::SetMainCharacter(const std::string& Name)
+{
+    MainCharacter = Name;
+}
+
+void UniverseTab::SetLocationCharacter(const std::string& Name)
+{
+    LocationCharacter = Name;
+}
+
+bool UniverseTab::DrawLocationCharacterRow()
+{
+    const float ComboWidth = Theme::Px(230.0f);
+    Widgets::RowLabel("Character to use", ComboWidth);
+
+    ImGui::BeginDisabled(FollowLocation == false);
+    std::string Removed;
+    const bool Changed = CharacterPicker::Draw("##LocationCharacter", "Any character", ComboWidth, LocationCharacter, Characters, Removed);
+    ImGui::EndDisabled();
+    Widgets::EndRow();
+
+    if (Removed.empty() == false)
+    {
+        CharacterRemoved.Emit(Removed);
+    }
+
+    return Changed;
 }
 
 void UniverseTab::SetHistory(const std::vector<IntelHistoryEntry>* const NewHistory)

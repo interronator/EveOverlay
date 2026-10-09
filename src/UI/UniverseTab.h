@@ -22,12 +22,17 @@ public:
     Signal<> TestKeywordSoundRequested;
     Signal<> HistoryClearRequested;
     Signal<> OpenJumpBridgesRequested;
+    Signal<const std::string&> CharacterRemoved;
 
     const std::string& GetTitle() const override;
     const std::string& GetDescription() const override;
 
     void SetStatus(const std::string& NewStatus);
     void SetClientsOpen(const bool IsOpen);
+
+    void SetCharacters(const std::vector<std::string>& NewCharacters);
+    void SetMainCharacter(const std::string& Name);
+    void SetLocationCharacter(const std::string& Name);
 
     // The list must outlive the tab; it is read every frame
     void SetHistory(const std::vector<IntelHistoryEntry>* const NewHistory);
@@ -76,6 +81,7 @@ private:
 
     // A dropdown of every known system with a search box at the top of the list; returns true when a system was picked
     bool DrawSystemRow();
+    bool DrawLocationCharacterRow();
 
     bool SelectSystem(const int NameIndex);
 
@@ -122,6 +128,9 @@ private:
     bool IgnoreClear = true;
     bool ScaleVolume = true;
     bool FollowLocation = false;
+    std::string LocationCharacter;
+    std::string MainCharacter;
+    std::vector<std::string> Characters;
     bool UseJumpBridges = true;
     char Keywords[256] = {};
     std::string KeywordSoundPath;

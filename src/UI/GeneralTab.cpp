@@ -1,5 +1,7 @@
 #include "UI/GeneralTab.h"
 
+#include "UI/CharacterPicker.h"
+#include "UI/Theme.h"
 #include "UI/Widgets.h"
 
 const std::string& GeneralTab::GetTitle() const
@@ -12,10 +14,43 @@ const std::string& GeneralTab::GetDescription() const
     return Description;
 }
 
+void GeneralTab::SetCharacters(const std::vector<std::string>& NewCharacters)
+{
+    Characters = NewCharacters;
+}
+
+void GeneralTab::SetMainCharacter(const std::string& Name)
+{
+    MainCharacter = Name;
+}
+
+bool GeneralTab::DrawMainCharacterRow()
+{
+    const float ComboWidth = Theme::Px(CHARACTER_COMBO_WIDTH);
+    Widgets::RowLabel("Main character", ComboWidth);
+
+    std::string Removed;
+    const bool Changed = CharacterPicker::Draw("##MainCharacter", "None selected", ComboWidth, MainCharacter, Characters, Removed);
+    Widgets::EndRow();
+
+    if (Removed.empty() == false)
+    {
+        CharacterRemoved.Emit(Removed);
+    }
+
+    return Changed;
+}
+
 void GeneralTab::Draw()
 {
     bool Changed = false;
 
+    Widgets::SectionLabel("CHARACTER");
+    Widgets::BeginCard("##Character");
+    Changed = DrawMainCharacterRow() == true || Changed == true;
+    Widgets::EndCard();
+
+    Widgets::SectionLabel("BEHAVIOR");
     Widgets::BeginCard("##Behavior");
     Changed = Widgets::ToggleRow("Minimize to system tray", MinimizeToTray) == true || Changed == true;
     Widgets::RowDivider();
@@ -50,6 +85,8 @@ void GeneralTab::Draw()
 
 void GeneralTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration)
 {
+    MainCharacter = Configuration.MainCharacter;
+    Characters = Configuration.GetSelectableCharacters();
     MinimizeToTray = Configuration.MinimizeToTray;
     WindowOnTop = Configuration.MainWindowAlwaysOnTop;
     LightTheme = Configuration.LightTheme;
@@ -64,6 +101,7 @@ void GeneralTab::LoadFromConfiguration(const ThumbnailConfiguration& Configurati
 
 void GeneralTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
 {
+    Configuration.MainCharacter = MainCharacter;
     Configuration.MinimizeToTray = MinimizeToTray;
     Configuration.MainWindowAlwaysOnTop = WindowOnTop;
     Configuration.LightTheme = LightTheme;

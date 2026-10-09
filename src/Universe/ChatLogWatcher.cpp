@@ -48,6 +48,19 @@ void ChatLogWatcher::SetExactChannelMatch(const bool Exact)
     ExactChannelMatch = Exact;
 }
 
+void ChatLogWatcher::SetListener(const std::string& Name)
+{
+    const std::string Trimmed = TextUtil::Trim(Name);
+    if (TextUtil::EqualsIgnoreCase(Trimmed, ListenerFilter) == true)
+    {
+        return;
+    }
+
+    ListenerFilter = Trimmed;
+    Offsets.clear();
+    Started = false;
+}
+
 void ChatLogWatcher::SetDirectory(std::filesystem::path NewDirectory)
 {
     Directory = std::move(NewDirectory);
@@ -114,7 +127,7 @@ std::vector<ChatMessage> ChatLogWatcher::Poll()
             continue;
         }
 
-        if (MatchesChannel(Entry.path()) == false)
+        if (MatchesChannel(Entry.path()) == false || MatchesListener(Entry.path()) == false)
         {
             continue;
         }
@@ -150,7 +163,7 @@ std::string ChatLogWatcher::FindCurrentSystem() const
 
         std::error_code TimeError;
         const std::filesystem::file_time_type LastWrite = Entry.last_write_time(TimeError);
-        if (::_wcsicmp(Entry.path().extension().c_str(), L".txt") != 0 || MatchesChannel(Entry.path()) == false || (TimeError.value() == 0 && LastWrite < StaleBefore))
+        if (::_wcsicmp(Entry.path().extension().c_str(), L".txt") != 0 || MatchesChannel(Entry.path()) == false || (TimeError.value() == 0 && LastWrite < StaleBefore) || MatchesListener(Entry.path()) == false)
         {
             continue;
         }
@@ -388,7 +401,17 @@ bool ChatLogWatcher::MatchesChannel(const std::filesystem::path& Path) const
     return false;
 }
 
-std::string ChatLogWatcher::ReadListener(const std::filesystem::path& Path)
+bool ChatLogWatcher::MatchesListener(const std::filesystem::path& Path) const
+{
+    if (ListenerFilter.empty() == true)
+    {
+        return true;
+    }
+
+    return TextUtil::EqualsIgnoreCase(ReadListener(Path), ListenerFilter) == true;
+}
+
+std::string ChatLogWatcher::ReadListener(const std::filesystem::path& Path) const
 {
     const std::wstring Key = Path.wstring();
     const std::unordered_map<std::wstring, std::string>::const_iterator Known = Listeners.find(Key);

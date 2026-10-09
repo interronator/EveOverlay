@@ -31,6 +31,9 @@ public:
     // Matches the whole channel name instead of any name that contains the filter
     void SetExactChannelMatch(const bool Exact);
 
+    // Only follows the logs of this character (the "Listener" in the log header, ignoring case); empty follows every character
+    void SetListener(const std::string& Name);
+
     static std::filesystem::path GetDefaultDirectory();
 
     // The first poll after a channel or directory change only records where each file currently ends, so old chatter is not replayed
@@ -65,15 +68,17 @@ private:
     static bool FindLastChannelChange(const std::filesystem::path& Path, std::string* const Time, std::string* const System);
 
     bool MatchesChannel(const std::filesystem::path& Path) const;
+    bool MatchesListener(const std::filesystem::path& Path) const;
     bool WasCreatedSinceStart(const std::filesystem::path& Path) const;
-    std::string ReadListener(const std::filesystem::path& Path);
+    std::string ReadListener(const std::filesystem::path& Path) const;
     void ReadNewLines(const std::filesystem::directory_entry& Entry, std::vector<ChatMessage>& Messages);
 
     std::filesystem::path Directory = GetDefaultDirectory();
     std::string ChannelFilter;
     std::vector<std::string> LoweredFilters;
     std::unordered_map<std::wstring, std::uintmax_t> Offsets;
-    std::unordered_map<std::wstring, std::string> Listeners;
+    std::string ListenerFilter;
+    mutable std::unordered_map<std::wstring, std::string> Listeners;
     bool Started = false;
     bool IncludeSystemMessages = false;
     bool ExactChannelMatch = false;
