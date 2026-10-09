@@ -99,7 +99,7 @@ public:
     bool DScanMarksScanAge = true;
     bool DScanCopyShipList = true;
 
-    bool TimerWindowEnabled = true;
+    bool TimerWindowEnabled = false;
     bool TimerShowScanAge = true;
     std::string ScanHotkey;
     std::string QuickTimerHotkey;
