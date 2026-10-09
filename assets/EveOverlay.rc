@@ -7,8 +7,8 @@ IDI_APPICON ICON "icon.ico"
 1 RT_MANIFEST "app.manifest"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,1,2,0
-PRODUCTVERSION 1,1,2,0
+FILEVERSION 1,1,3,0
+PRODUCTVERSION 1,1,3,0
 FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
 FILEFLAGS 0
 FILEOS VOS_NT_WINDOWS32
@@ -20,11 +20,11 @@ BEGIN
         BLOCK "040904B0"
         BEGIN
             VALUE "FileDescription", "Eve Overlay"
-            VALUE "FileVersion", "1.1.2.0"
+            VALUE "FileVersion", "1.1.3.0"
             VALUE "InternalName", "EveOverlay"
             VALUE "OriginalFilename", "EveOverlay.exe"
             VALUE "ProductName", "Eve Overlay"
-            VALUE "ProductVersion", "1.1.2.0"
+            VALUE "ProductVersion", "1.1.3.0"
         END
     END
     BLOCK "VarFileInfo"
