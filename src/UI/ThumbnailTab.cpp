@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "UI/Theme.h"
+
 const std::string& ThumbnailTab::GetTitle() const
 {
     return Title;
@@ -34,6 +36,13 @@ void ThumbnailTab::Draw()
     Widgets::RowDivider();
     BehaviorChanged = Widgets::ToggleRow("Lock previews in place", LockPreviews) == true || BehaviorChanged == true;
     Widgets::EndCard();
+
+    if (Organizer != nullptr)
+    {
+        ImGui::Dummy(ImVec2(0.0f, Theme::Px(6.0f)));
+        Widgets::SectionLabel("THUMBNAIL ORGANIZER");
+        Organizer->Draw();
+    }
 
     if (WidthChanged == true || HeightChanged == true)
     {
@@ -69,9 +78,9 @@ void ThumbnailTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) c
     Configuration.ThumbnailSize = Size{std::clamp(ThumbnailWidth, MinimumSize.Width, MaximumSize.Width), std::clamp(ThumbnailHeight, MinimumSize.Height, MaximumSize.Height)};
 }
 
-void ThumbnailTab::SetMoveAll(const bool Enabled)
+void ThumbnailTab::SetOrganizer(OrganizerTab* const NewOrganizer)
 {
-    MoveAll = Enabled;
+    Organizer = NewOrganizer;
 }
 
 void ThumbnailTab::SetThumbnailSize(const Size NewSize)

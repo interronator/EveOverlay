@@ -28,12 +28,6 @@ SettingsPresenter::SettingsPresenter(ThumbnailConfiguration& ConfigurationRefere
         OnThumbnailStateChanged(Title, IsDisabled);
     });
 
-    OrganizerPage.MoveAllChanged.Connect([this](const bool Enabled)
-    {
-        ThumbnailPage.SetMoveAll(Enabled);
-        SaveSettings();
-    });
-
     OrganizerPage.ArrangeRequested.Connect([this](const ThumbnailArrangement& Arrangement)
     {
         ArrangeRequested.Emit(Arrangement);
@@ -112,7 +106,6 @@ void SettingsPresenter::SaveSettings()
         Page->StoreToConfiguration(Configuration);
     }
 
-    OrganizerPage.SetMoveAll(Configuration.MoveAllThumbnails);
     Storage.Save();
 
     if (PreviousFrames != Configuration.ShowThumbnailFrames)

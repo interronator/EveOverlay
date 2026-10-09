@@ -16,18 +16,17 @@ const std::string& OrganizerTab::GetDescription() const
     return Description;
 }
 
+bool OrganizerTab::IsStandalone() const
+{
+    return false;
+}
+
 void OrganizerTab::Draw()
 {
     Widgets::BeginCard("##Enabled");
     if (Widgets::ToggleRow("Enable Thumbnail Organizer", Enabled) == true)
     {
         SettingsChanged.Emit();
-    }
-
-    Widgets::RowDivider();
-    if (Widgets::ToggleRow("Move all thumbnails together", MoveAll) == true)
-    {
-        MoveAllChanged.Emit(MoveAll);
     }
 
     Widgets::EndCard();
@@ -64,7 +63,6 @@ void OrganizerTab::Draw()
 void OrganizerTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration)
 {
     Enabled = Configuration.OrganizerEnabled;
-    MoveAll = Configuration.MoveAllThumbnails;
     Presets = Configuration.LayoutPresets;
     SmartStart = Configuration.OrganizerSmartStart;
     SlotCharacters = Configuration.OrganizerSlots;
@@ -77,11 +75,6 @@ void OrganizerTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) c
     Configuration.LayoutPresets = Presets;
     Configuration.OrganizerSmartStart = SmartStart;
     Configuration.OrganizerSlots = SlotCharacters;
-}
-
-void OrganizerTab::SetMoveAll(const bool NewValue)
-{
-    MoveAll = NewValue;
 }
 
 void OrganizerTab::SetDetectedCount(const int Count)

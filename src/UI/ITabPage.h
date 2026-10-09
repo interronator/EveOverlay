@@ -15,6 +15,12 @@ public:
 
     Signal<> SettingsChanged;
 
+    // A page that is not standalone is drawn inside another page and gets no entry in the sidebar
+    virtual bool IsStandalone() const
+    {
+        return true;
+    }
+
     virtual const std::string& GetTitle() const = 0;
     virtual const std::string& GetDescription() const = 0;
     virtual void Draw() = 0;

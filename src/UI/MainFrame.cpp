@@ -24,6 +24,8 @@ MainFrame::MainFrame(ThumbnailConfiguration& ConfigurationReference, Configurati
     , Presenter(ConfigurationReference, StorageReference, Pages, Thumbnail, Clients, Organizer, Hotkeys)
     , AppNameUtf8(TextUtil::ToUtf8(AppInfo::NAME))
 {
+    Thumbnail.SetOrganizer(&Organizer);
+
     // The presenter stores the tab into the configuration first because it connected to SettingsChanged before this handler
     Universe.SettingsChanged.Connect([this]()
     {
@@ -656,6 +658,11 @@ void MainFrame::DrawSidebar()
 bool MainFrame::IsPageVisible(const size_t Index) const
 {
     const ITabPage* const Page = Pages[Index];
+    if (Page->IsStandalone() == false)
+    {
+        return false;
+    }
+
     const bool IsDeveloping = Page == &Alerts || Page == &TimerSettings;
     return IsDeveloping == false || Configuration.ShowDevelopingTabs == true;
 }
