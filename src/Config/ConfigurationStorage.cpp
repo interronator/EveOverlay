@@ -62,6 +62,7 @@ const ConfigurationStorage::StringProperty ConfigurationStorage::STRING_PROPERTI
     {"QuickTimerHotkey", &ThumbnailConfiguration::QuickTimerHotkey},
     {"TimerSoundPath", &ThumbnailConfiguration::TimerSoundPath},
     {"SyncerUserFilePath", &ThumbnailConfiguration::SyncerUserFilePath},
+    {"SyncerCharacterFilePath", &ThumbnailConfiguration::SyncerCharacterFilePath},
 };
 
 const ConfigurationStorage::IntProperty ConfigurationStorage::INT_PROPERTIES[] = {

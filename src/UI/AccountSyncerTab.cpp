@@ -34,14 +34,27 @@ void AccountSyncerTab::Draw()
     Changed = DrawAccountRow() == true || Changed == true;
     Widgets::RowDivider();
     Changed = DrawNicknameRow() == true || Changed == true;
+    Widgets::RowDivider();
+    Changed = DrawCharacterRow() == true || Changed == true;
     Widgets::EndCard();
 
     ImGui::BeginDisabled(UserFilePath.empty() == true);
-    const bool SyncPressed = ImGui::Button("Sync", ImVec2(Theme::Px(100.0f), 0.0f));
+    const bool SyncPressed = ImGui::Button("Sync accounts", ImVec2(Theme::Px(130.0f), 0.0f));
     Widgets::HoverTip("Copy the chosen account's UI settings to all your other accounts. The files being replaced are backed up first.");
     if (SyncPressed == true)
     {
-        RunSync();
+        RunSync(UserFilePath);
+    }
+
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(CharacterFilePath.empty() == true);
+    const bool SyncCharactersPressed = ImGui::Button("Sync characters", ImVec2(Theme::Px(140.0f), 0.0f));
+    Widgets::HoverTip("Copy the chosen character's window layout and other per-character settings to all your other characters. The files being replaced are backed up first.");
+    if (SyncCharactersPressed == true)
+    {
+        RunSync(CharacterFilePath);
     }
 
     ImGui::EndDisabled();
@@ -88,7 +101,7 @@ void AccountSyncerTab::Draw()
     }
 
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::TEXT_DISABLED);
-    ImGui::TextWrapped("Choose the account whose UI settings every other account should copy, then press Sync. Character settings are not touched. Close all EVE clients first. Every sync keeps a backup in the OriginalFiles folder next to the settings, and Undo restores the latest one, even after restarting this app. Backups are never deleted automatically. The likely character shown next to an account is a guess from matching file times; a nickname makes an account easy to recognise. You can also drop an account file onto this window.");
+    ImGui::TextWrapped("Choose the account whose settings every other account should copy and press Sync accounts. To make window layouts and other per-character settings match as well, choose a character and press Sync characters. The two syncs are separate, and each only replaces files of its own kind. Close all EVE clients first. Every sync keeps a backup in the OriginalFiles folder next to the settings, and Undo restores the latest one, even after restarting this app. Backups are never deleted automatically. The likely character shown next to an account is a guess from matching file times; a nickname makes an account easy to recognise. You can also drop an account file onto this window.");
     ImGui::PopStyleColor();
 
     if (Changed == true)
@@ -100,6 +113,7 @@ void AccountSyncerTab::Draw()
 void AccountSyncerTab::LoadFromConfiguration(const ThumbnailConfiguration& Configuration)
 {
     UserFilePath = Configuration.SyncerUserFilePath;
+    CharacterFilePath = Configuration.SyncerCharacterFilePath;
     Resolver.Seed(Configuration.CharacterNames);
     AccountNicknames = Configuration.AccountNicknames;
     NicknameFor = 0;
@@ -111,6 +125,7 @@ void AccountSyncerTab::LoadFromConfiguration(const ThumbnailConfiguration& Confi
 void AccountSyncerTab::StoreToConfiguration(ThumbnailConfiguration& Configuration) const
 {
     Configuration.SyncerUserFilePath = UserFilePath;
+    Configuration.SyncerCharacterFilePath = CharacterFilePath;
     Configuration.CharacterNames = Resolver.GetAll();
     Configuration.AccountNicknames = AccountNicknames;
 }
@@ -119,19 +134,29 @@ void AccountSyncerTab::HandleDroppedFiles(const std::vector<std::filesystem::pat
 {
     for (const std::filesystem::path& File : Files)
     {
-        if (ProfileSyncer::Classify(File) != ProfileSyncer::FileKind::User)
+        const ProfileSyncer::FileKind Kind = ProfileSyncer::Classify(File);
+        if (Kind == ProfileSyncer::FileKind::Unknown)
         {
             continue;
         }
 
         AdoptFolder(File.parent_path());
-        UserFilePath = TextUtil::ToUtf8(File.wstring());
-        SetStatus("Account chosen. Press Sync to copy its settings to the other accounts.", false);
+        if (Kind == ProfileSyncer::FileKind::User)
+        {
+            UserFilePath = TextUtil::ToUtf8(File.wstring());
+            SetStatus("Account chosen. Press Sync accounts to copy its settings to the other accounts.", false);
+        }
+        else
+        {
+            CharacterFilePath = TextUtil::ToUtf8(File.wstring());
+            SetStatus("Character chosen. Press Sync characters to copy its settings to the other characters.", false);
+        }
+
         SettingsChanged.Emit();
         return;
     }
 
-    SetStatus("None of the dropped files is a core_user_<number>.dat account file.", true);
+    SetStatus("None of the dropped files is a core_user_<number>.dat or core_char_<number>.dat file.", true);
 }
 
 std::filesystem::path AccountSyncerTab::GetEveRoot()
@@ -309,6 +334,11 @@ void AccountSyncerTab::ClearPathsOutsideCurrentFolder()
     {
         UserFilePath.clear();
     }
+
+    if (CharacterFilePath.empty() == false && std::filesystem::path(TextUtil::FromUtf8(CharacterFilePath)).parent_path() != CurrentFolder)
+    {
+        CharacterFilePath.clear();
+    }
 }
 
 bool AccountSyncerTab::DrawNicknameRow()
@@ -438,6 +468,43 @@ bool AccountSyncerTab::DrawAccountRow()
     return Changed;
 }
 
+bool AccountSyncerTab::DrawCharacterRow()
+{
+    const float ComboWidth = Theme::Px(230.0f);
+    Widgets::RowLabel("Character to copy", ComboWidth);
+    ImGui::SetNextItemWidth(ComboWidth);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(Theme::Px(POPUP_MIN_WIDTH), 0.0f), ImVec2(FLT_MAX, FLT_MAX));
+
+    const std::filesystem::path Current = CharacterFilePath.empty() == true ? std::filesystem::path() : std::filesystem::path(TextUtil::FromUtf8(CharacterFilePath));
+    const std::string Preview = Current.empty() == true ? "Select a character..." : BuildFileLabel(Current);
+    bool Changed = false;
+    if (ImGui::BeginCombo("##Character", Preview.c_str()) == true)
+    {
+        if (CharacterFiles.empty() == true)
+        {
+            ImGui::TextDisabled("No character files found in this folder");
+        }
+
+        for (const std::filesystem::path& File : CharacterFiles)
+        {
+            ImGui::PushID(TextUtil::ToUtf8(File.filename().wstring()).c_str());
+            if (Widgets::DropdownOption(BuildFileLabel(File).c_str(), File == Current) == true)
+            {
+                CharacterFilePath = TextUtil::ToUtf8(File.wstring());
+                Status.clear();
+                Changed = true;
+            }
+
+            ImGui::PopID();
+        }
+
+        ImGui::EndCombo();
+    }
+
+    Widgets::EndRow();
+    return Changed;
+}
+
 bool AccountSyncerTab::Browse()
 {
     const std::wstring InitialDirectory = CurrentFolder.empty() == true ? GetEveRoot().wstring() : CurrentFolder.wstring();
@@ -468,14 +535,14 @@ bool AccountSyncerTab::Browse()
     return true;
 }
 
-void AccountSyncerTab::RunSync()
+void AccountSyncerTab::RunSync(const std::string& MasterPath)
 {
     if (IsClientRunning() == true)
     {
         return;
     }
 
-    const ProfileSyncer::Result Outcome = ProfileSyncer::Sync(std::filesystem::path(TextUtil::FromUtf8(UserFilePath)));
+    const ProfileSyncer::Result Outcome = ProfileSyncer::Sync(std::filesystem::path(TextUtil::FromUtf8(MasterPath)));
     SetStatus(Outcome.Message, Outcome.Succeeded == false);
     Rescan();
 }
@@ -501,7 +568,7 @@ void AccountSyncerTab::RefreshUndoPoint()
         return;
     }
 
-    UndoTip = "Restore the " + std::to_string(UndoPoint.FileCount) + " account files replaced by the sync of " + ProfileSyncer::FormatStamp(UndoPoint.Stamp) + ".";
+    UndoTip = "Restore the " + std::to_string(UndoPoint.FileCount) + " files replaced by the sync of " + ProfileSyncer::FormatStamp(UndoPoint.Stamp) + ".";
 }
 
 // EVE rewrites its settings when a client closes, which would silently undo a sync or an undo made while one is running

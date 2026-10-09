@@ -101,18 +101,20 @@ std::vector<std::filesystem::path> ProfileSyncer::FindSettingsFolders(const std:
     return Folders;
 }
 
-ProfileSyncer::Result ProfileSyncer::Sync(const std::filesystem::path& UserMaster)
+ProfileSyncer::Result ProfileSyncer::Sync(const std::filesystem::path& Master)
 {
     Result Outcome;
-    if (IsValidMaster(UserMaster, FileKind::User) == false)
+    const FileKind Kind = Classify(Master);
+    if (Kind == FileKind::Unknown || IsValidMaster(Master, Kind) == false)
     {
-        Outcome.Message = "The account file is missing or is not a core_user_<number>.dat file.";
+        Outcome.Message = "The chosen file is missing or is not a core_user_<number>.dat or core_char_<number>.dat file.";
         return Outcome;
     }
 
-    const std::filesystem::path Directory = UserMaster.parent_path();
+    const std::string Noun = Kind == FileKind::User ? "accounts" : "characters";
+    const std::filesystem::path Directory = Master.parent_path();
     std::vector<std::filesystem::path> Targets;
-    if (CollectTargets(Directory, UserMaster, Targets) == false)
+    if (CollectTargets(Directory, Master, Kind, Targets) == false)
     {
         Outcome.Message = "Could not read the settings folder.";
         return Outcome;
@@ -120,7 +122,7 @@ ProfileSyncer::Result ProfileSyncer::Sync(const std::filesystem::path& UserMaste
 
     if (Targets.empty() == true)
     {
-        Outcome.Message = "No other account files were found in the folder.";
+        Outcome.Message = "No other " + Noun + " files were found in the folder.";
         return Outcome;
     }
 
@@ -147,7 +149,7 @@ ProfileSyncer::Result ProfileSyncer::Sync(const std::filesystem::path& UserMaste
 
     for (const std::filesystem::path& Target : Targets)
     {
-        std::filesystem::copy_file(UserMaster, Target, std::filesystem::copy_options::overwrite_existing, ErrorCode);
+        std::filesystem::copy_file(Master, Target, std::filesystem::copy_options::overwrite_existing, ErrorCode);
         if (ErrorCode.value() != 0)
         {
             Logger::Error("Profile sync could not overwrite " + Logger::DescribePath(Target) + ": " + ErrorCode.message());
@@ -159,7 +161,7 @@ ProfileSyncer::Result ProfileSyncer::Sync(const std::filesystem::path& UserMaste
     }
 
     Outcome.Succeeded = true;
-    Outcome.Message = "Synced " + std::to_string(Outcome.FilesSynced) + " accounts. Use Undo to restore the originals.";
+    Outcome.Message = "Synced " + std::to_string(Outcome.FilesSynced) + " " + Noun + ". Use Undo to restore the originals.";
     return Outcome;
 }
 
@@ -196,7 +198,7 @@ ProfileSyncer::UndoPoint ProfileSyncer::FindUndoPoint(const std::filesystem::pat
 
     if (Newest.Found == true)
     {
-        Newest.FileCount = static_cast<int>(ListFiles(Newest.Folder, FileKind::User).size());
+        Newest.FileCount = static_cast<int>(ListFiles(Newest.Folder, FileKind::User).size() + ListFiles(Newest.Folder, FileKind::Character).size());
     }
 
     return Newest;
@@ -212,8 +214,12 @@ ProfileSyncer::Result ProfileSyncer::Undo(const std::filesystem::path& Directory
         return Outcome;
     }
 
+    std::vector<std::filesystem::path> Backups = ListFiles(Point.Folder, FileKind::User);
+    const std::vector<std::filesystem::path> CharacterBackups = ListFiles(Point.Folder, FileKind::Character);
+    Backups.insert(Backups.end(), CharacterBackups.begin(), CharacterBackups.end());
+
     std::error_code ErrorCode;
-    for (const std::filesystem::path& Backup : ListFiles(Point.Folder, FileKind::User))
+    for (const std::filesystem::path& Backup : Backups)
     {
         std::filesystem::copy_file(Backup, Directory / Backup.filename(), std::filesystem::copy_options::overwrite_existing, ErrorCode);
         if (ErrorCode.value() != 0)
@@ -231,7 +237,7 @@ ProfileSyncer::Result ProfileSyncer::Undo(const std::filesystem::path& Directory
     std::filesystem::rename(Point.Folder, UsedFolder, ErrorCode);
 
     Outcome.Succeeded = true;
-    Outcome.Message = "Restored " + std::to_string(Outcome.FilesSynced) + " accounts to how they were before the sync of " + FormatStamp(Point.Stamp) + " UTC.";
+    Outcome.Message = "Restored " + std::to_string(Outcome.FilesSynced) + " files to how they were before the sync of " + FormatStamp(Point.Stamp) + " UTC.";
     if (ErrorCode.value() != 0)
     {
         Outcome.Message += " The backup folder could not be marked as used.";
@@ -337,7 +343,7 @@ bool ProfileSyncer::IsValidMaster(const std::filesystem::path& FilePath, const F
     return Classify(FilePath) == Kind && std::filesystem::is_regular_file(FilePath, ErrorCode) == true;
 }
 
-bool ProfileSyncer::CollectTargets(const std::filesystem::path& Directory, const std::filesystem::path& UserMaster, std::vector<std::filesystem::path>& Targets)
+bool ProfileSyncer::CollectTargets(const std::filesystem::path& Directory, const std::filesystem::path& Master, const FileKind Kind, std::vector<std::filesystem::path>& Targets)
 {
     std::error_code ErrorCode;
     std::filesystem::directory_iterator Current(Directory, ErrorCode);
@@ -346,7 +352,7 @@ bool ProfileSyncer::CollectTargets(const std::filesystem::path& Directory, const
         return false;
     }
 
-    const std::wstring MasterName = TextUtil::ToLower(UserMaster.filename().wstring());
+    const std::wstring MasterName = TextUtil::ToLower(Master.filename().wstring());
     for (; Current != std::filesystem::directory_iterator(); Current.increment(ErrorCode))
     {
         if (ErrorCode.value() != 0)
@@ -354,7 +360,7 @@ bool ProfileSyncer::CollectTargets(const std::filesystem::path& Directory, const
             return false;
         }
 
-        if (Current->is_regular_file(ErrorCode) == false || Classify(Current->path()) != FileKind::User)
+        if (Current->is_regular_file(ErrorCode) == false || Classify(Current->path()) != Kind)
         {
             continue;
         }

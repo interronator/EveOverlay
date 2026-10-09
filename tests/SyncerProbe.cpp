@@ -85,8 +85,8 @@ int main()
     Check.Expect(ProfileSyncer::FindUndoPoint(Root).Found == false, "no undo point before any sync");
     Check.Expect(ProfileSyncer::Undo(Root).Succeeded == false, "undo with nothing to undo fails");
 
-    ProfileSyncer::Result Outcome = ProfileSyncer::Sync(Root / L"core_char_1.dat");
-    Check.Expect(Outcome.Succeeded == false, "a character file cannot be the master");
+    ProfileSyncer::Result Outcome = ProfileSyncer::Sync(Root / L"prefs.ini");
+    Check.Expect(Outcome.Succeeded == false, "a file that is neither an account nor a character file cannot be the master");
     Check.Expect(std::filesystem::exists(Root / L"OriginalFiles") == false, "a rejected sync creates no backup");
 
     // The old tool left loose files and the app leaves used backups behind; neither may count as an undo point
@@ -136,6 +136,22 @@ int main()
     Check.Expect(ReadText(Root / L"core_user_1.dat") == "master-v2", "undo never touches accounts that were not replaced");
     Check.Expect(ProfileSyncer::FindUndoPoint(Root).Found == false, "nothing is left to undo");
     Check.Expect(ReadText(Root / L"OriginalFiles" / L"core_user_99.dat") == "legacy", "legacy files are left alone");
+
+    WriteText(Root / L"core_char_3.dat", "old-char-3");
+    Outcome = ProfileSyncer::Sync(Root / L"core_char_1.dat");
+    Check.Expect(Outcome.Succeeded == true && Outcome.FilesSynced == 2, "a character sync replaces the other two characters");
+    Check.Expect(ReadText(Root / L"core_char_2.dat") == "master-char" && ReadText(Root / L"core_char_3.dat") == "master-char", "other characters overwritten");
+    Check.Expect(ReadText(Root / L"core_char_1.dat") == "master-char", "character master untouched");
+    Check.Expect(ReadText(Root / L"core_user_2.dat") == "old-user-2" && ReadText(Root / L"core_user_1.dat") == "master-v2", "a character sync leaves account files alone");
+
+    const ProfileSyncer::UndoPoint CharacterPoint = ProfileSyncer::FindUndoPoint(Root);
+    Check.Expect(CharacterPoint.Found == true && CharacterPoint.FileCount == 2, "a character sync leaves an undo point holding both originals");
+    Check.Expect(ReadText(CharacterPoint.Folder / L"core_char_2.dat") == "old-char-2", "character backup holds the original");
+
+    Outcome = ProfileSyncer::Undo(Root);
+    Check.Expect(Outcome.Succeeded == true && Outcome.FilesSynced == 2, "undo restores both characters");
+    Check.Expect(ReadText(Root / L"core_char_2.dat") == "old-char-2" && ReadText(Root / L"core_char_3.dat") == "old-char-3", "characters back to their originals");
+    Check.Expect(ReadText(Root / L"core_user_2.dat") == "old-user-2", "character undo leaves account files alone");
 
     std::filesystem::remove_all(Root);
     if (Check.FailureCount == 0)

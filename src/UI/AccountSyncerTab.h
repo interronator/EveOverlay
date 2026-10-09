@@ -50,17 +50,19 @@ private:
 
     bool DrawFolderRow();
     bool DrawAccountRow();
+    bool DrawCharacterRow();
     bool Browse();
-    void RunSync();
+    void RunSync(const std::string& MasterPath);
     void RunUndo();
     void RefreshUndoPoint();
     bool IsClientRunning();
     void SetStatus(const std::string& Message, const bool IsError);
 
     const std::string Title = "Account Syncer";
-    const std::string Description = "Make every account use the same UI settings as the one you choose.";
+    const std::string Description = "Make every account, and every character, use the same UI settings as the ones you choose.";
 
     std::string UserFilePath;
+    std::string CharacterFilePath;
     ProfileSyncer::UndoPoint UndoPoint;
     std::string UndoTip;
     std::filesystem::path CurrentFolder;

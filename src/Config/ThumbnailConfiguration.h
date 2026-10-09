@@ -114,6 +114,7 @@ public:
     std::vector<LayoutPreset> LayoutPresets;
 
     std::string SyncerUserFilePath;
+    std::string SyncerCharacterFilePath;
     std::map<long long, std::string> CharacterNames;
     std::map<long long, std::string> AccountNicknames;
 

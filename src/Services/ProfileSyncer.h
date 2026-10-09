@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-// Copies one master user (account) file over every other user file in the EVE settings folder, keeping a backup of each overwritten file
+// Copies one master file over every other file of the same kind (account or character) in the EVE settings folder, keeping a backup of each overwritten file
 class ProfileSyncer
 {
 public:
@@ -40,7 +40,7 @@ public:
         int FileCount = 0;
     };
 
-    static Result Sync(const std::filesystem::path& UserMaster);
+    static Result Sync(const std::filesystem::path& Master);
 
     // The newest backup in <Directory>\OriginalFiles that has not been undone yet; read from disk so it survives restarts
     static UndoPoint FindUndoPoint(const std::filesystem::path& Directory);
@@ -79,5 +79,5 @@ private:
     static bool HasNumericSuffix(const std::wstring& Name, const std::wstring& Prefix);
 
     static bool IsValidMaster(const std::filesystem::path& FilePath, const FileKind Kind);
-    static bool CollectTargets(const std::filesystem::path& Directory, const std::filesystem::path& UserMaster, std::vector<std::filesystem::path>& Targets);
+    static bool CollectTargets(const std::filesystem::path& Directory, const std::filesystem::path& Master, const FileKind Kind, std::vector<std::filesystem::path>& Targets);
 };
