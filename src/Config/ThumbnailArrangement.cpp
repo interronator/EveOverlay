@@ -267,22 +267,52 @@ std::vector<size_t> ThumbnailArranger::FindMajorityGroup(const std::vector<Point
     return Best;
 }
 
-std::optional<Point> ThumbnailArranger::DeriveOrigin(const std::vector<Point>& Locations, const Size ThumbnailSize, const int Gap)
+std::optional<Point> ThumbnailArranger::DeriveCenter(const std::vector<Point>& Locations, const Size ThumbnailSize)
 {
-    const std::vector<size_t> Group = FindMajorityGroup(Locations, ThumbnailSize, Gap);
-    if (Group.empty() == true)
+    if (Locations.empty() == true)
     {
         return std::nullopt;
     }
 
-    Point Origin = Locations[Group.front()];
-    for (const size_t Index : Group)
+    int Left = Locations.front().X;
+    int Top = Locations.front().Y;
+    int Right = Left + ThumbnailSize.Width;
+    int Bottom = Top + ThumbnailSize.Height;
+    for (const Point& Location : Locations)
     {
-        Origin.X = std::min(Origin.X, Locations[Index].X);
-        Origin.Y = std::min(Origin.Y, Locations[Index].Y);
+        Left = std::min(Left, Location.X);
+        Top = std::min(Top, Location.Y);
+        Right = std::max(Right, Location.X + ThumbnailSize.Width);
+        Bottom = std::max(Bottom, Location.Y + ThumbnailSize.Height);
     }
 
-    return Origin;
+    return Point{(Left + Right) / 2, (Top + Bottom) / 2};
+}
+
+Point ThumbnailArranger::GetOriginForCenter(const Point Center, const ThumbnailArrangement& Arrangement, const Size ThumbnailSize, const size_t Count)
+{
+    ThumbnailArrangement Probe = Arrangement;
+    Probe.Origin = Point{0, 0};
+
+    const std::vector<Point> Locations = GetLocations(Probe, ThumbnailSize, Count);
+    if (Locations.empty() == true)
+    {
+        return Center;
+    }
+
+    int Left = Locations.front().X;
+    int Top = Locations.front().Y;
+    int Right = Left + ThumbnailSize.Width;
+    int Bottom = Top + ThumbnailSize.Height;
+    for (const Point& Location : Locations)
+    {
+        Left = std::min(Left, Location.X);
+        Top = std::min(Top, Location.Y);
+        Right = std::max(Right, Location.X + ThumbnailSize.Width);
+        Bottom = std::max(Bottom, Location.Y + ThumbnailSize.Height);
+    }
+
+    return Point{Center.X - (Left + Right) / 2, Center.Y - (Top + Bottom) / 2};
 }
 
 Point ThumbnailArranger::FitToArea(const Point Origin, const ThumbnailArrangement& Arrangement, const Size ThumbnailSize, const size_t Count, const ScreenBounds& Area)

@@ -367,27 +367,66 @@ void UniverseTab::DrawRegionRow()
     Widgets::RowLabel("Region", FieldWidth);
     ImGui::SetNextItemWidth(FieldWidth);
 
+    ImGui::SetNextWindowSizeConstraints(ImVec2(FieldWidth, 0.0f), ImVec2(FLT_MAX, Theme::Px(POPUP_MAX_HEIGHT)));
+
     const char* const Preview = SelectedRegion.empty() == true ? "All regions" : SelectedRegion.c_str();
-    if (ImGui::BeginCombo("##Region", Preview) == true)
+    float ListHeight = 0.0f;
+    if (Widgets::BeginDropdownCombo("##Region", Preview, Theme::Px(LIST_HEIGHT), ListHeight) == true)
     {
-        if (Widgets::DropdownOption("All regions", SelectedRegion.empty() == true) == true)
+        if (ImGui::IsWindowAppearing() == true)
         {
-            SelectedRegion.clear();
-            FilterApplied = false;
+            RegionFilter[0] = '\0';
         }
 
+        const bool Entered = Widgets::DropdownFilter("##RegionFilter", "Type to filter...", "Type part of a region name to narrow the list. Enter picks the first match.", RegionFilter, sizeof(RegionFilter));
+        const std::string Needle = TextUtil::ToLower(TextUtil::Trim(RegionFilter));
+
+        std::vector<const std::string*> RegionMatches;
         if (Listing != nullptr)
         {
             for (const std::string& Region : Listing->RegionNames)
             {
-                if (Widgets::DropdownOption(Region.c_str(), Region == SelectedRegion) == true)
+                if (TextUtil::ToLower(Region).find(Needle) != std::string::npos)
                 {
-                    SelectedRegion = Region;
-                    FilterApplied = false;
+                    RegionMatches.push_back(&Region);
                 }
             }
         }
 
+        if (Entered == true && RegionMatches.empty() == false)
+        {
+            SelectedRegion = *RegionMatches.front();
+            FilterApplied = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (Widgets::BeginDropdownList("##Regions", ListHeight) == true)
+        {
+            if (Needle.empty() == true && Widgets::DropdownOption("All regions", SelectedRegion.empty() == true) == true)
+            {
+                SelectedRegion.clear();
+                FilterApplied = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            if (RegionMatches.empty() == true && Needle.empty() == false)
+            {
+                ImGui::TextDisabled("No matching regions");
+            }
+
+            for (size_t Index = 0; Index < RegionMatches.size(); Index++)
+            {
+                const bool IsEnterTarget = Index == 0 && Needle.empty() == false;
+                if (Widgets::DropdownOption(RegionMatches[Index]->c_str(), *RegionMatches[Index] == SelectedRegion || IsEnterTarget == true, 0.0f, IsEnterTarget) == true)
+                {
+                    SelectedRegion = *RegionMatches[Index];
+                    FilterApplied = false;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+        }
+
+        Widgets::EndDropdownList();
         ImGui::EndCombo();
     }
 

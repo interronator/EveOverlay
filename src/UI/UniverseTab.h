@@ -106,6 +106,7 @@ private:
     bool FilterApplied = false;
     const SystemListing* Listing = nullptr;
     std::string SelectedRegion;
+    char RegionFilter[64] = {};
     std::vector<std::string> LowerNames;
     std::vector<int> Matches;
     int Jumps = 3;

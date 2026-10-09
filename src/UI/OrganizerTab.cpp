@@ -495,6 +495,8 @@ void OrganizerTab::ApplyPreset(const size_t Index)
     OriginY = Preset.Arrangement.Origin.Y;
     SlotCharacters = Preset.Arrangement.SlotCharacters;
 
-    ArrangeRequested.Emit(Preset.Arrangement);
+    ThumbnailArrangement Requested = Preset.Arrangement;
+    Requested.SmartStart = SmartStart;
+    ArrangeRequested.Emit(Requested);
     LastApplied = "Applied preset \"" + Preset.Name + "\".";
 }

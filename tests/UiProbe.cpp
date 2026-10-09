@@ -109,12 +109,15 @@ void TestArranger(Checker& Check)
     const std::vector<Point> Clustered{Point{1000, 500}, Point{1100, 500}, Point{1000, 550}, Point{1100, 550}, Point{0, 0}};
     const std::vector<size_t> Group = ThumbnailArranger::FindMajorityGroup(Clustered, Thumb, 0);
     Check.Expect(Group == std::vector<size_t>{0, 1, 2, 3}, "four of five previews side by side are the majority group");
-    const std::optional<Point> Derived = ThumbnailArranger::DeriveOrigin(Clustered, Thumb, 0);
-    Check.Expect(Derived.has_value() == true && Derived->X == 1000 && Derived->Y == 500, "the new grid starts at the group's top-left corner");
-    Check.Expect(ThumbnailArranger::DeriveOrigin({Point{0, 0}, Point{1000, 0}, Point{2000, 0}, Point{3000, 0}}, Thumb, 0).has_value() == false, "scattered previews have no majority group");
-    Check.Expect(ThumbnailArranger::DeriveOrigin({Point{0, 0}, Point{100, 0}, Point{2000, 0}, Point{2100, 0}}, Thumb, 0).has_value() == false, "exactly half is not a majority");
-    const std::optional<Point> Single = ThumbnailArranger::DeriveOrigin({Point{300, 200}}, Thumb, 0);
-    Check.Expect(Single.has_value() == true && Single->X == 300 && Single->Y == 200, "a single preview is its own group");
+    const std::optional<Point> Derived = ThumbnailArranger::DeriveCenter({Point{1000, 500}, Point{1100, 500}, Point{1000, 550}, Point{1100, 550}}, Thumb);
+    Check.Expect(Derived.has_value() == true && Derived->X == 1100 && Derived->Y == 550, "the centre is the centre of the area the previews cover");
+    const std::optional<Point> Spread = ThumbnailArranger::DeriveCenter({Point{0, 0}, Point{1000, 0}, Point{2000, 0}, Point{3000, 0}}, Thumb);
+    Check.Expect(Spread.has_value() == true && Spread->X == 1550 && Spread->Y == 25, "scattered previews are all counted");
+    Check.Expect(ThumbnailArranger::DeriveCenter({}, Thumb).has_value() == false, "no previews have no centre");
+    const std::optional<Point> Single = ThumbnailArranger::DeriveCenter({Point{300, 200}}, Thumb);
+    Check.Expect(Single.has_value() == true && Single->X == 350 && Single->Y == 225, "a single preview is its own group");
+    const Point CenteredOrigin = ThumbnailArranger::GetOriginForCenter(Point{1100, 550}, ThumbnailArrangement{GridShape{2, 2}, 0, Point{0, 0}}, Thumb, 4);
+    Check.Expect(CenteredOrigin.X == 1000 && CenteredOrigin.Y == 500, "a grid is placed so its centre lands on the given centre");
     Check.Expect(ThumbnailArranger::FindMajorityGroup({Point{0, 0}, Point{120, 0}, Point{240, 0}}, Thumb, 20).size() == 3, "previews spaced by a gap still form one group");
     Check.Expect(ThumbnailArranger::FindMajorityGroup({}, Thumb, 0).empty() == true, "no previews have no group");
 

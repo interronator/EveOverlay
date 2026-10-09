@@ -216,14 +216,14 @@ ThumbnailArrangement ThumbnailManager::ApplySmartStart(const ThumbnailArrangemen
         return Arrangement;
     }
 
-    const std::optional<Point> GroupOrigin = ThumbnailArranger::DeriveOrigin(CurrentLocations, Configuration.ThumbnailSize, Arrangement.Gap);
-    if (GroupOrigin.has_value() == false)
+    const std::optional<Point> GroupCenter = ThumbnailArranger::DeriveCenter(CurrentLocations, Configuration.ThumbnailSize);
+    if (GroupCenter.has_value() == false)
     {
         return Arrangement;
     }
 
     ThumbnailArrangement Placed = Arrangement;
-    Placed.Origin = GroupOrigin.value();
+    Placed.Origin = ThumbnailArranger::GetOriginForCenter(GroupCenter.value(), Arrangement, Configuration.ThumbnailSize, CurrentLocations.size());
 
     const RECT WorkArea = WindowManagerInstance.GetWorkArea(POINT{Placed.Origin.X, Placed.Origin.Y});
     if (WorkArea.right > WorkArea.left && WorkArea.bottom > WorkArea.top)

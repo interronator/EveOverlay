@@ -68,8 +68,11 @@ public:
     // The thumbnails that sit close together and make up more than half of all of them; empty when no group is a majority
     static std::vector<size_t> FindMajorityGroup(const std::vector<Point>& Locations, const Size ThumbnailSize, const int Gap);
 
-    // Where a grid should start so it takes the place of the majority group: the group's top-left corner; nothing when there is no majority
-    static std::optional<Point> DeriveOrigin(const std::vector<Point>& Locations, const Size ThumbnailSize, const int Gap);
+    // The centre of the area covered by all the thumbnails; nothing when there are none
+    static std::optional<Point> DeriveCenter(const std::vector<Point>& Locations, const Size ThumbnailSize);
+
+    // The origin that puts the centre of a grid of Count thumbnails on Center
+    static Point GetOriginForCenter(const Point Center, const ThumbnailArrangement& Arrangement, const Size ThumbnailSize, const size_t Count);
 
     // Moves the origin so a grid of Count thumbnails fits inside the area, as far as it can
     static Point FitToArea(const Point Origin, const ThumbnailArrangement& Arrangement, const Size ThumbnailSize, const size_t Count, const ScreenBounds& Area);
